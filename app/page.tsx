@@ -402,7 +402,7 @@ export default function WorkspacePage() {
   // the desktop sidebar div, TabletSlideOver, or MobileBottomSheet.
   // It is only mounted once — no DOM duplication.
   const sidebarContent = (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full overflow-y-auto">
       {/* 1. Structure summary */}
       <div className="shrink-0 p-3 border-b border-border">
         <StructureSummary design={design} computed={computed} />

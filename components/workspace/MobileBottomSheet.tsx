@@ -5,8 +5,8 @@ import React, { useRef, useState, useCallback, useEffect } from "react";
 type SheetState = "peek" | "half" | "full";
 
 // How much of the sheet is visible in each state.
-// 128px = 22px drag handle + ~106px for the structure summary card (p-3 wrapper).
-const PEEK_HEIGHT = 128; // px — drag handle + structure summary
+// 142px = 36px drag handle + ~106px for the structure summary card (p-3 wrapper).
+const PEEK_HEIGHT = 142; // px — drag handle + structure summary
 
 function getSnapTranslateY(state: SheetState, windowHeight: number): number {
   const sheetH = windowHeight * 0.92; // sheet is 92vh tall
@@ -229,7 +229,7 @@ export function MobileBottomSheet({ children }: MobileBottomSheetProps) {
     >
       {/* ── Drag handle ────────────────────────────────────────────── */}
       <div
-        className="shrink-0 flex items-center justify-center h-[22px] pt-2 cursor-grab active:cursor-grabbing touch-none select-none"
+        className="shrink-0 flex items-center justify-center h-[36px] pt-2 pb-1 cursor-grab active:cursor-grabbing touch-none select-none"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -240,7 +240,7 @@ export function MobileBottomSheet({ children }: MobileBottomSheetProps) {
       </div>
 
       {/* ── Sheet content ───────────────────────────────────────────── */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
         {children}
       </div>
     </div>
