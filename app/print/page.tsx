@@ -7,7 +7,7 @@ import { computeAll } from "@/lib/calculations/geometry";
 import { CulvertCrossSection } from "@/components/drawing/CulvertCrossSection";
 import { PlanView } from "@/components/drawing/PlanView";
 import { BarScheduleTable } from "@/components/drawing/BarScheduleTable";
-import { SheetBorder, SheetSize, SHEET_DIMS } from "@/components/drawing/SheetBorder";
+import { SheetBorder, SheetSize, SHEET_DIMS, TITLE_BLOCK_TOTAL_H } from "@/components/drawing/SheetBorder";
 import { VDOT } from "@/lib/standards/vdot";
 
 export default function PrintPage() {
@@ -47,13 +47,12 @@ export default function PrintPage() {
   const computed = computeAll(design.geometry, design.units, design.reinforcement);
   const totalSheets = 4;
 
-  // Derive content area from sheet dims (margin=36, inner padding=20, inner border=4, title block=120)
+  // Derive content area from sheet dims
   const dims = SHEET_DIMS[sheetSize];
   const margin = 36;
   const padding = 24; // 20 content offset + 4 inner border
-  const titleBlockH = 120;
   const contentW = dims.w - 2 * margin - 2 * padding;
-  const contentH = dims.h - 2 * margin - 2 * padding - titleBlockH;
+  const contentH = dims.h - 2 * margin - 2 * padding - TITLE_BLOCK_TOTAL_H - 10; // 10px gap above title block
 
   return (
     <div className="bg-white print-sheets">

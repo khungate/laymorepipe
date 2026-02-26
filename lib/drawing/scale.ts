@@ -14,26 +14,29 @@ export interface DrawingScale {
 
 /**
  * Auto-compute a scale that fits the culvert within the given SVG viewport
- * with generous margins for dimensions and labels.
+ * with proportional margins for dimensions and labels.
  */
 export function autoScale(
   outsideWidth: number,
   outsideHeight: number,
   viewportWidth: number,
-  viewportHeight: number
+  viewportHeight: number,
+  /** Extra bottom margin for notes/scale indicator below dimension chains */
+  extraBottomMargin = 0
 ): DrawingScale {
-  // Reserve margin for dimension lines and labels
-  const marginX = 200;
-  const marginY = 180;
+  // Proportional margins that work for both interactive and print viewports
+  const marginX = Math.min(200, Math.max(80, viewportWidth * 0.15));
+  const marginTop = Math.min(180, Math.max(60, viewportHeight * 0.12));
+  const marginBottom = Math.min(180, Math.max(80, viewportHeight * 0.18)) + extraBottomMargin;
   const availW = viewportWidth - marginX * 2;
-  const availH = viewportHeight - marginY * 2;
+  const availH = viewportHeight - marginTop - marginBottom;
   const ppi = Math.min(availW / outsideWidth, availH / outsideHeight);
 
-  // Center the drawing
+  // Center horizontally, anchor to top margin vertically
   const drawnW = outsideWidth * ppi;
   const drawnH = outsideHeight * ppi;
   const originX = marginX + (availW - drawnW) / 2;
-  const originY = marginY + (availH - drawnH) / 2;
+  const originY = marginTop + (availH - drawnH) / 2;
 
   return { ppi, originX, originY };
 }

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { ProjectInfo, CulvertGeometry, UnitConfig } from "@/lib/types/culvert";
-import { TitleBlock } from "./TitleBlock";
+import { TitleBlock, TITLE_BLOCK_TOTAL_H } from "./TitleBlock";
 
 export type SheetSize = "ARCH_D" | "TABLOID";
 
@@ -37,8 +37,8 @@ export function SheetBorder({
   const margin = 36; // 0.5 inch margin
   const borderW = dims.w - margin * 2;
   const borderH = dims.h - margin * 2;
-  const titleBlockH = 120;
-  const titleBlockW = borderW * 0.5;
+  const innerPad = 8; // gap between inner border and content
+  const titleBlockW = borderW - innerPad * 2;
 
   return (
     <svg
@@ -78,7 +78,7 @@ export function SheetBorder({
         {children}
       </g>
 
-      {/* Title block (bottom right) */}
+      {/* Title block (bottom, full width inside border) */}
       <TitleBlock
         project={project}
         geometry={geometry}
@@ -87,11 +87,11 @@ export function SheetBorder({
         totalSheets={totalSheets}
         sheetTitle={sheetTitle}
         width={titleBlockW}
-        x={margin + borderW - titleBlockW - 8}
-        y={margin + borderH - titleBlockH - 8}
+        x={margin + innerPad}
+        y={margin + borderH - TITLE_BLOCK_TOTAL_H - innerPad}
       />
     </svg>
   );
 }
 
-export { SHEET_DIMS };
+export { SHEET_DIMS, TITLE_BLOCK_TOTAL_H };
