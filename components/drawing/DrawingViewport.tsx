@@ -13,8 +13,10 @@ interface DrawingViewportProps {
  * Mobile: pinch to zoom, single-finger drag to pan, double-tap to zoom in/out.
  */
 export function DrawingViewport({ children }: DrawingViewportProps) {
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const isDark = mounted && resolvedTheme === "dark";
   const containerRef = useRef<HTMLDivElement>(null);
   const [viewState, setViewState] = useState({ x: 0, y: 0, zoom: 1 });
   const [dragging, setDragging] = useState(false);

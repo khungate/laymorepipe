@@ -554,7 +554,7 @@ export default function WorkspacePage() {
   );
 
   return (
-    <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
+    <div className="h-screen max-w-[100vw] flex flex-col bg-background text-foreground overflow-hidden">
       <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
 
       {/* ── Top bar ─────────────────────────────────────────────────── */}
@@ -583,7 +583,7 @@ export default function WorkspacePage() {
 
         {/* ── Desktop actions (≥1024px) ─────────────────────────────── */}
         {isDesktop && (
-          <div className="flex items-center gap-1 ml-auto shrink-0">
+          <div className="flex items-center gap-1 ml-auto shrink-0 overflow-hidden">
             <Button
               variant="ghost"
               size="icon"
@@ -643,12 +643,12 @@ export default function WorkspacePage() {
               size="icon"
               className="h-8 w-8"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              title={mounted ? (theme === "dark" ? "Switch to light mode" : "Switch to dark mode") : undefined}
             >
-              {theme === "dark" ? (
-                <Sun className="h-3.5 w-3.5" />
+              {mounted ? (
+                theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />
               ) : (
-                <Moon className="h-3.5 w-3.5" />
+                <span className="h-3.5 w-3.5" />
               )}
             </Button>
             <Separator orientation="vertical" className="h-5 mx-1" />
@@ -669,6 +669,20 @@ export default function WorkspacePage() {
               <FileDown className="h-3.5 w-3.5 mr-1.5" />
               Generate PDF
             </Button>
+            {sidebarCollapsed && (
+              <>
+                <Separator orientation="vertical" className="h-5 mx-1" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setSidebarCollapsed(false)}
+                  title="Show panel"
+                >
+                  <PanelRight className="h-3.5 w-3.5" />
+                </Button>
+              </>
+            )}
           </div>
         )}
 
@@ -832,7 +846,9 @@ export default function WorkspacePage() {
             <button
               type="button"
               onClick={() => setSidebarCollapsed((c) => !c)}
-              className="absolute z-20 top-1/2 -translate-y-1/2 h-8 w-3.5 flex items-center justify-center bg-background border border-border rounded-sm shadow-sm hover:bg-muted transition-colors duration-200"
+              className={`absolute z-20 top-1/2 -translate-y-1/2 flex items-center justify-center bg-background border border-border rounded-sm shadow-sm hover:bg-muted transition-all duration-200 ${
+                sidebarCollapsed ? "h-10 w-6" : "h-8 w-3.5"
+              }`}
               style={{
                 right: sidebarCollapsed ? 0 : sidebarWidth,
                 transition: toggleTransition,
