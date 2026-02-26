@@ -341,6 +341,13 @@ export default function WorkspacePage() {
                     geometry={design.geometry}
                     onChange={(geometry) => setDesign((d) => ({ ...d, geometry }))}
                     standard={currentStandard}
+                    standardName={design.project.stateStandard}
+                    onChangeStandard={(name) =>
+                      setDesign((d) => ({
+                        ...d,
+                        project: { ...d.project, stateStandard: name },
+                      }))
+                    }
                     onApplyStandardSize={handleApplyStandardSize}
                   />
                 </TabsContent>

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { CulvertGeometry } from "@/lib/types/culvert";
 import { StateStandard, StandardSize } from "@/lib/standards/types";
+import { STANDARD_NAMES } from "@/lib/standards";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,10 @@ interface GeometryFormProps {
   onChange: (geo: CulvertGeometry) => void;
   /** Current state standard (for quick size selector) */
   standard?: StateStandard;
+  /** Current state standard name (e.g. "VDOT") */
+  standardName?: string;
+  /** Called when user changes the state standard */
+  onChangeStandard?: (name: string) => void;
   /** Called when user selects a standard size (span/rise/walls + covers) */
   onApplyStandardSize?: (size: StandardSize) => void;
 }
@@ -22,6 +27,8 @@ export function GeometryForm({
   geometry: geo,
   onChange,
   standard,
+  standardName,
+  onChangeStandard,
   onApplyStandardSize,
 }: GeometryFormProps) {
   const update = (patch: Partial<CulvertGeometry>) =>
@@ -31,6 +38,26 @@ export function GeometryForm({
 
   return (
     <div className="space-y-4">
+      {/* State Standard Selector */}
+      {onChangeStandard && (
+        <div className="space-y-1">
+          <Label className="text-xs text-muted-foreground">Design Standard</Label>
+          <Select
+            value={standardName ?? "VDOT"}
+            onValueChange={(v) => onChangeStandard(v)}
+          >
+            <SelectTrigger className="h-8 text-sm font-mono font-medium">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STANDARD_NAMES.map((name) => (
+                <SelectItem key={name} value={name}>{name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {/* Quick Size Selector */}
       {sizes.length > 0 && (
         <QuickSizeSelector
