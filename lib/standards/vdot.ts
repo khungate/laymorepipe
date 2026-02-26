@@ -1,0 +1,40 @@
+import { StateStandard } from "./types";
+
+export const VDOT: StateStandard = {
+  name: "VDOT",
+  designCode: "AASHTO LRFD 5th Ed 2010 w/ 2011 Interim + VDOT Modifications",
+  covers: {
+    topSlabExterior: 2.5,
+    topSlabInterior: 2.0,
+    bottomSlabExterior: 1.5,
+    bottomSlabInterior: 1.5,
+    wallExterior: 1.5,
+    wallInterior: 1.5,
+  },
+  minConcreteStrength: 5000,
+  rebarGrade: 60,
+  fillCategories: [
+    { min: 0, max: 24, label: "0 to 2 ft", corrosionProtection: true },
+    { min: 24, max: 60, label: "2 to 5 ft" },
+    { min: 60, max: 120, label: "5 to 10 ft" },
+    { min: 120, max: 240, label: "10 to 20 ft" },
+    { min: 240, max: 360, label: "20 to 30 ft" },
+    { min: 360, max: 480, label: "30 to 40 ft" },
+    { min: 480, max: 600, label: "40 to 50 ft" },
+  ],
+  bufferZone: { min: 3, max: 6 },
+  maxLiftHoles: 4,
+  barDimensionConvention: "out_to_out",
+  gasketSpec: "ASTM C1677",
+  qcStampRequired: true,
+  generalNotes: [
+    "All reinforcing steel shall be Grade 60, ASTM A615.",
+    "Concrete compressive strength f'c = 5,000 PSI at 28 days.",
+    "All bar dimensions are out to out.",
+    "All joints shall be sealed with gaskets conforming to ASTM C1677.",
+    "Lifting devices shall be designed for 200% of unit weight.",
+    "All precast units shall be manufactured in accordance with VDOT Standards.",
+    "Concrete cover: Top slab exterior 2 1/2\", Top slab interior 2\", All others 1 1/2\".",
+    "Haunches shall be formed at all interior corners as shown.",
+  ],
+};
