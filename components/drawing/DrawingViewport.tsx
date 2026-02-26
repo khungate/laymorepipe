@@ -63,7 +63,7 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
   return (
     <div
       className="engineering-canvas relative w-full h-full overflow-hidden"
-      style={{ background: "#1a1f2e" }}
+      style={{ background: "var(--canvas-bg, #1a1f2e)" }}
     >
       {/* Subtle vignette overlay */}
       <div

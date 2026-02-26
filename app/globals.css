@@ -147,6 +147,7 @@
 
 /* Dark engineering canvas (workspace viewport) */
 .engineering-canvas {
+  --canvas-bg: #1a1f2e;
   --draw-bg: transparent;           /* viewport div bg is the dark color */
   --draw-grid: rgba(65, 105, 170, 0.13);
   --draw-stroke-heavy: #dde6f0;     /* object lines: bright for contrast */
