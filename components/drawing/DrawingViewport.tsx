@@ -113,7 +113,7 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onMouseLeave={() => setDragging(false)}
       >
         <div
           style={{
@@ -136,6 +136,8 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
           backdropFilter: "blur(4px)",
           zIndex: 10,
         }}
+        onMouseDown={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
       >
         <button
           onClick={() => {
