@@ -100,8 +100,8 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
       <div
         className="absolute bottom-3 right-3 flex items-center gap-0.5 rounded"
         style={{
-          background: "rgba(10, 14, 22, 0.75)",
-          border: "1px solid rgba(100, 140, 200, 0.2)",
+          background: "hsl(var(--background) / 0.75)",
+          border: "1px solid hsl(var(--border))",
           backdropFilter: "blur(4px)",
           zIndex: 10,
         }}
@@ -111,14 +111,14 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
             setViewState((prev) => ({ ...prev, zoom: Math.max(0.2, prev.zoom * 0.8) }))
           }
           className="px-2.5 py-1.5 text-xs font-mono hover:bg-white/5 transition-colors"
-          style={{ color: "#7a96af" }}
+          style={{ color: "hsl(var(--muted-foreground))" }}
         >
           −
         </button>
         <button
           onClick={resetView}
           className="px-2.5 py-1.5 text-xs font-mono hover:bg-white/5 transition-colors"
-          style={{ color: "#7a96af", minWidth: 42, textAlign: "center" }}
+          style={{ color: "hsl(var(--muted-foreground))", minWidth: 42, textAlign: "center" }}
         >
           {Math.round(viewState.zoom * 100)}%
         </button>
@@ -127,7 +127,7 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
             setViewState((prev) => ({ ...prev, zoom: Math.min(5, prev.zoom * 1.25) }))
           }
           className="px-2.5 py-1.5 text-xs font-mono hover:bg-white/5 transition-colors"
-          style={{ color: "#7a96af" }}
+          style={{ color: "hsl(var(--muted-foreground))" }}
         >
           +
         </button>
@@ -136,7 +136,7 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
       {/* View label */}
       <div
         className="absolute bottom-3 left-3 text-xs font-mono"
-        style={{ color: "rgba(80, 110, 155, 0.7)", zIndex: 10, letterSpacing: "0.05em" }}
+        style={{ color: "hsl(var(--muted-foreground) / 0.7)", zIndex: 10, letterSpacing: "0.05em" }}
       >
         PERMATILE / ENGINEERING CANVAS
       </div>

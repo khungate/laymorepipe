@@ -146,21 +146,22 @@
 }
 
 /* Dark engineering canvas (workspace viewport) */
+/* Colors derived from the .dark theme palette (warm neutral + primary red/orange) */
 .engineering-canvas {
-  --canvas-bg: #1a1f2e;
-  --draw-bg: transparent;           /* viewport div bg is the dark color */
-  --draw-grid: rgba(65, 105, 170, 0.13);
-  --draw-stroke-heavy: #dde6f0;     /* object lines: bright for contrast */
-  --draw-stroke-medium: #8fa6bf;    /* medium visible lines */
-  --draw-stroke-thin: #4a6178;      /* dimension / extension lines */
-  --draw-stroke-center: #3b6fa0;    /* center lines: blue */
-  --draw-fill-void: #0d1219;        /* culvert opening: near-black */
-  --draw-fill-surface: rgba(13, 18, 25, 0.6);
-  --draw-hatch: rgba(160, 180, 210, 0.28);  /* hatch: subtle on dark */
-  --draw-text: #c5d5e8;
-  --draw-text-dim: #7a96af;
-  --draw-rebar: #22d3ee;            /* cyan rebar dots */
-  --draw-rebar-highlight: #f59e0b;  /* amber for selected */
-  --draw-dim: rgba(90, 140, 200, 0.7);
-  --draw-center: rgba(60, 120, 200, 0.45);
+  --canvas-bg: oklch(0.16 0.005 285);
+  --draw-bg: transparent;
+  --draw-grid: oklch(0.35 0 0 / 0.18);
+  --draw-stroke-heavy: oklch(0.9 0 0);        /* object lines: near-white */
+  --draw-stroke-medium: oklch(0.65 0 0);       /* secondary visible lines */
+  --draw-stroke-thin: oklch(0.45 0 0);         /* dimension / extension lines */
+  --draw-stroke-center: oklch(0.45 0.01 285);  /* center lines: muted neutral */
+  --draw-fill-void: oklch(0.12 0 0);           /* culvert opening */
+  --draw-fill-surface: oklch(0.12 0 0 / 0.6);
+  --draw-hatch: oklch(0.7 0 0 / 0.22);         /* concrete hatch */
+  --draw-text: oklch(0.85 0 0);
+  --draw-text-dim: oklch(0.6 0 0);
+  --draw-rebar: oklch(0.637 0.237 25.331);     /* theme primary (red/orange) */
+  --draw-rebar-highlight: oklch(0.808 0.114 19.571); /* theme chart-1 (lighter) */
+  --draw-dim: oklch(0.6 0 0 / 0.75);
+  --draw-center: oklch(0.4 0 0 / 0.45);
 }
