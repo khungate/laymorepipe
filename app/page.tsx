@@ -7,6 +7,7 @@ import { DEFAULT_DESIGN } from "@/lib/drawing/defaults";
 import { computeAll } from "@/lib/calculations/geometry";
 import { saveDesign, loadDesign, clearDesign, exportDesignJSON, importDesignJSON } from "@/lib/persistence/storage";
 import { useUndoRedo } from "@/lib/hooks/useUndoRedo";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { validateDesign } from "@/lib/validation/validate";
 import { ALL_STANDARDS } from "@/lib/standards";
 import { CulvertCrossSection } from "@/components/drawing/CulvertCrossSection";
@@ -19,9 +20,18 @@ import { ReinforcementTable } from "@/components/forms/ReinforcementTable";
 import { ProjectInfoForm } from "@/components/forms/ProjectInfoForm";
 import { ComputedValuesPanel } from "@/components/ComputedValues";
 import { ValidationPanel } from "@/components/ValidationPanel";
+import { MobileBottomSheet } from "@/components/workspace/MobileBottomSheet";
+import { TabletSlideOver } from "@/components/workspace/TabletSlideOver";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { formatFeetInches } from "@/lib/calculations/quantities";
 import {
   FileDown,
@@ -36,6 +46,8 @@ import {
   Moon,
   ChevronDown,
   ChevronRight,
+  PanelRight,
+  MoreHorizontal,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 
@@ -171,13 +183,28 @@ export default function WorkspacePage() {
   const isInitialLoad = useRef(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // ── Sidebar collapse / resize state ───────────────────────────────
+  // ── Sidebar collapse / resize state (desktop only) ────────────────
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(380);
   const [isDragging, setIsDragging] = useState(false);
-  // These refs prevent persisting state back to localStorage before loading it
   const isFirstCollapsedSave = useRef(true);
   const isFirstWidthSave = useRef(true);
+
+  // ── Responsive state ──────────────────────────────────────────────
+  // `mounted` prevents SSR/hydration mismatch: we default to desktop layout
+  // until the client knows the actual viewport size.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const isMobileQuery = useMediaQuery("(max-width: 767px)");
+  const isTabletQuery = useMediaQuery("(min-width: 768px) and (max-width: 1023px)");
+
+  const isMobile = mounted && isMobileQuery;
+  const isTablet = mounted && isTabletQuery;
+  const isDesktop = !isMobile && !isTablet;
+
+  // Tablet slide-over open state
+  const [tabletPanelOpen, setTabletPanelOpen] = useState(false);
 
   // ── Accordion open/closed state ───────────────────────────────────
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
@@ -313,7 +340,7 @@ export default function WorkspacePage() {
     e.target.value = "";
   };
 
-  // ── Sidebar drag-to-resize ────────────────────────────────────────
+  // ── Sidebar drag-to-resize (desktop only) ─────────────────────────
   const handleResizeStart = useCallback(
     (e: React.MouseEvent) => {
       e.preventDefault();
@@ -322,7 +349,6 @@ export default function WorkspacePage() {
       setIsDragging(true);
 
       const handleMouseMove = (ev: MouseEvent) => {
-        // Dragging the left edge left → sidebar grows (delta positive)
         const delta = startX - ev.clientX;
         const newWidth = Math.max(300, Math.min(500, startWidth + delta));
         setSidebarWidth(newWidth);
@@ -366,138 +392,389 @@ export default function WorkspacePage() {
     { key: "plan-outlet", label: "Outlet Unit" },
   ];
 
-  // Smooth transition duration — disabled while dragging to avoid jank
+  // Smooth transition — disabled while resizing to avoid jank
   const sidebarTransition = isDragging ? "none" : "width 250ms ease";
   const toggleTransition = isDragging ? "none" : "right 250ms ease";
+
+  // ── Shared sidebar content (rendered in desktop / tablet / mobile) ─
+  //
+  // This JSX node is passed as children to whichever container is active:
+  // the desktop sidebar div, TabletSlideOver, or MobileBottomSheet.
+  // It is only mounted once — no DOM duplication.
+  const sidebarContent = (
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* 1. Structure summary */}
+      <div className="shrink-0 p-3 border-b border-border">
+        <StructureSummary design={design} computed={computed} />
+      </div>
+
+      {/* 2. Accordion sections (scrollable) */}
+      <ScrollArea className="flex-1 min-h-0">
+        <div>
+          <AccordionSection
+            title="Geometry"
+            summary={geometrySummary}
+            isOpen={openSections.geometry}
+            onToggle={() => toggleSection("geometry")}
+          >
+            <GeometryForm
+              geometry={design.geometry}
+              onChange={(geometry) => setDesign((d) => ({ ...d, geometry }))}
+              standard={currentStandard}
+              standardName={design.project.stateStandard}
+              onChangeStandard={(name) =>
+                setDesign((d) => ({
+                  ...d,
+                  project: { ...d.project, stateStandard: name },
+                }))
+              }
+              onApplyStandardSize={handleApplyStandardSize}
+            />
+          </AccordionSection>
+
+          <AccordionSection
+            title="Units"
+            summary={unitsSummary}
+            isOpen={openSections.units}
+            onToggle={() => toggleSection("units")}
+          >
+            <UnitsForm
+              units={design.units}
+              onChange={(units) => setDesign((d) => ({ ...d, units }))}
+            />
+          </AccordionSection>
+
+          <AccordionSection
+            title="Materials"
+            summary={materialsSummary}
+            isOpen={openSections.materials}
+            onToggle={() => toggleSection("materials")}
+          >
+            <MaterialsForm
+              materials={design.materials}
+              onChange={(materials) => setDesign((d) => ({ ...d, materials }))}
+            />
+          </AccordionSection>
+
+          <AccordionSection
+            title="Rebar"
+            summary={rebarSummary}
+            isOpen={openSections.rebar}
+            onToggle={() => toggleSection("rebar")}
+          >
+            <ReinforcementTable
+              bars={design.reinforcement}
+              onChange={(reinforcement) =>
+                setDesign((d) => ({ ...d, reinforcement }))
+              }
+              highlightedBarId={highlightedBarId}
+              onHighlight={setHighlightedBarId}
+            />
+          </AccordionSection>
+
+          <AccordionSection
+            title="Project"
+            summary={projectSummary}
+            isOpen={openSections.project}
+            onToggle={() => toggleSection("project")}
+          >
+            <ProjectInfoForm
+              project={design.project}
+              onChange={(project) => setDesign((d) => ({ ...d, project }))}
+            />
+          </AccordionSection>
+        </div>
+      </ScrollArea>
+
+      {/* 3. Computed values — pinned at bottom */}
+      <div className="shrink-0 border-t border-border bg-background">
+        <div className="px-3 py-2.5">
+          <ComputedValuesPanel values={computed} />
+        </div>
+      </div>
+
+      {/* 4. Validation */}
+      <div className="shrink-0">
+        <ValidationPanel result={validation} />
+      </div>
+    </div>
+  );
+
+  // ── Shared overflow/more menu (tablet + mobile) ───────────────────
+  const overflowMenu = (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8" title="More options">
+          <MoreHorizontal className="h-3.5 w-3.5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem
+          onClick={() => {
+            if (confirm("Start a new design? Current design will be cleared.")) {
+              clearDesign();
+              replaceDesign(DEFAULT_DESIGN);
+            }
+          }}
+        >
+          <FilePlus className="h-4 w-4 mr-2" />
+          New Design
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => fileInputRef.current?.click()}>
+          <Upload className="h-4 w-4 mr-2" />
+          Import JSON
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => exportDesignJSON(design)}>
+          <Download className="h-4 w-4 mr-2" />
+          Export JSON
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+        >
+          {theme === "dark" ? (
+            <Sun className="h-4 w-4 mr-2" />
+          ) : (
+            <Moon className="h-4 w-4 mr-2" />
+          )}
+          {theme === "dark" ? "Light mode" : "Dark mode"}
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={() => {
+            sessionStorage.setItem("permatile-print-design", JSON.stringify(design));
+            window.open("/print", "_blank");
+          }}
+        >
+          <FileDown className="h-4 w-4 mr-2" />
+          Generate PDF
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
       <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
 
       {/* ── Top bar ─────────────────────────────────────────────────── */}
-      <header className="h-12 border-b border-border flex items-center justify-between px-4 shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Ruler className="h-4 w-4 text-primary" />
-            <span className="font-semibold text-sm tracking-tight">Permatile</span>
-          </div>
-          <Separator orientation="vertical" className="h-5" />
-          <span className="text-xs text-muted-foreground font-mono">
-            {formatFeetInches(design.geometry.span)} × {formatFeetInches(design.geometry.rise)} ×{" "}
-            {formatFeetInches(design.units.totalLength)}{" "}
-            {design.geometry.cellCount > 1
-              ? `${design.geometry.cellCount} Cell`
-              : "Single Cell"}{" "}
-            Box Culvert
-          </span>
+      <header className="h-12 border-b border-border flex items-center justify-between px-4 shrink-0 gap-2">
+
+        {/* Logo — always visible */}
+        <div className="flex items-center gap-2 shrink-0">
+          <Ruler className="h-4 w-4 text-primary" />
+          <span className="font-semibold text-sm tracking-tight">Permatile</span>
         </div>
 
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={undo}
-            disabled={!canUndo}
-            title="Undo (Ctrl+Z)"
-          >
-            <Undo2 className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={redo}
-            disabled={!canRedo}
-            title="Redo (Ctrl+Shift+Z)"
-          >
-            <Redo2 className="h-3.5 w-3.5" />
-          </Button>
-          <Separator orientation="vertical" className="h-5 mx-1" />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => {
-              if (confirm("Start a new design? Current design will be cleared.")) {
-                clearDesign();
-                replaceDesign(DEFAULT_DESIGN);
-              }
-            }}
-            title="New Design"
-          >
-            <FilePlus className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => fileInputRef.current?.click()}
-            title="Import JSON"
-          >
-            <Upload className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => exportDesignJSON(design)}
-            title="Export JSON"
-          >
-            <Download className="h-3.5 w-3.5" />
-          </Button>
-          <Separator orientation="vertical" className="h-5 mx-1" />
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {theme === "dark" ? (
-              <Sun className="h-3.5 w-3.5" />
-            ) : (
-              <Moon className="h-3.5 w-3.5" />
-            )}
-          </Button>
-          <Separator orientation="vertical" className="h-5 mx-1" />
-          {saveStatus === "saved" && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground animate-in fade-in mr-1">
-              <Check className="h-3 w-3" />
-              Saved
+        {/* Dimensions — desktop and tablet; hidden on mobile (shown in bottom sheet summary) */}
+        {!isMobile && (
+          <>
+            <Separator orientation="vertical" className="h-5 mx-1 shrink-0" />
+            <span className={`text-xs text-muted-foreground font-mono min-w-0 ${isTablet ? "truncate max-w-[200px]" : ""}`}>
+              {formatFeetInches(design.geometry.span)} × {formatFeetInches(design.geometry.rise)} ×{" "}
+              {formatFeetInches(design.units.totalLength)}{" "}
+              {design.geometry.cellCount > 1
+                ? `${design.geometry.cellCount} Cell`
+                : "Single Cell"}{" "}
+              Box Culvert
             </span>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              sessionStorage.setItem("permatile-print-design", JSON.stringify(design));
-              window.open("/print", "_blank");
-            }}
-          >
-            <FileDown className="h-3.5 w-3.5 mr-1.5" />
-            Generate PDF
-          </Button>
-        </div>
+          </>
+        )}
+
+        {/* ── Desktop actions (≥1024px) ─────────────────────────────── */}
+        {isDesktop && (
+          <div className="flex items-center gap-1 ml-auto shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={undo}
+              disabled={!canUndo}
+              title="Undo (Ctrl+Z)"
+            >
+              <Undo2 className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={redo}
+              disabled={!canRedo}
+              title="Redo (Ctrl+Shift+Z)"
+            >
+              <Redo2 className="h-3.5 w-3.5" />
+            </Button>
+            <Separator orientation="vertical" className="h-5 mx-1" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => {
+                if (confirm("Start a new design? Current design will be cleared.")) {
+                  clearDesign();
+                  replaceDesign(DEFAULT_DESIGN);
+                }
+              }}
+              title="New Design"
+            >
+              <FilePlus className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => fileInputRef.current?.click()}
+              title="Import JSON"
+            >
+              <Upload className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => exportDesignJSON(design)}
+              title="Export JSON"
+            >
+              <Download className="h-3.5 w-3.5" />
+            </Button>
+            <Separator orientation="vertical" className="h-5 mx-1" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? (
+                <Sun className="h-3.5 w-3.5" />
+              ) : (
+                <Moon className="h-3.5 w-3.5" />
+              )}
+            </Button>
+            <Separator orientation="vertical" className="h-5 mx-1" />
+            {saveStatus === "saved" && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground animate-in fade-in mr-1">
+                <Check className="h-3 w-3" />
+                Saved
+              </span>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                sessionStorage.setItem("permatile-print-design", JSON.stringify(design));
+                window.open("/print", "_blank");
+              }}
+            >
+              <FileDown className="h-3.5 w-3.5 mr-1.5" />
+              Generate PDF
+            </Button>
+          </div>
+        )}
+
+        {/* ── Tablet actions (768-1023px): undo/redo + panel toggle + overflow ── */}
+        {isTablet && (
+          <div className="flex items-center gap-1 ml-auto shrink-0">
+            {saveStatus === "saved" && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground animate-in fade-in mr-1">
+                <Check className="h-3 w-3" />
+                Saved
+              </span>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={undo}
+              disabled={!canUndo}
+              title="Undo (Ctrl+Z)"
+            >
+              <Undo2 className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={redo}
+              disabled={!canRedo}
+              title="Redo (Ctrl+Shift+Z)"
+            >
+              <Redo2 className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => setTabletPanelOpen((o) => !o)}
+              title="Toggle panel"
+            >
+              <PanelRight className="h-3.5 w-3.5" />
+            </Button>
+            {overflowMenu}
+          </div>
+        )}
+
+        {/* ── Mobile actions (<768px): undo/redo + more menu ─────────── */}
+        {isMobile && (
+          <div className="flex items-center gap-0.5 ml-auto shrink-0">
+            {saveStatus === "saved" && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground animate-in fade-in mr-1">
+                <Check className="h-3 w-3" />
+                Saved
+              </span>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={undo}
+              disabled={!canUndo}
+              title="Undo (Ctrl+Z)"
+            >
+              <Undo2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-9 w-9"
+              onClick={redo}
+              disabled={!canRedo}
+              title="Redo (Ctrl+Shift+Z)"
+            >
+              <Redo2 className="h-4 w-4" />
+            </Button>
+            {overflowMenu}
+          </div>
+        )}
       </header>
 
       {/* ── Main content ─────────────────────────────────────────────── */}
       <div className="flex flex-1 min-h-0 relative">
-        {/* ── Drawing viewport ── */}
+
+        {/* ── Drawing viewport — always fills available width ─────────── */}
         <div className="flex-1 min-w-0 flex flex-col">
-          {/* View switcher */}
+
+          {/* View switcher
+              Desktop: compact, fixed height
+              Mobile/Tablet: overflow-x-auto, 44px min touch target
+          */}
           <div
-            className="flex items-center gap-1 px-3 py-1.5 border-b border-border shrink-0"
-            style={{
-              background: "rgba(0,0,0,0.25)",
-              borderColor: "rgba(100,140,200,0.15)",
-            }}
+            className={`flex items-center border-b border-border/50 bg-muted/30 shrink-0 ${
+              isMobile || isTablet
+                ? "gap-1 px-2 overflow-x-auto"
+                : "gap-1 px-3 py-1.5"
+            }`}
+            style={isMobile || isTablet ? { WebkitOverflowScrolling: "touch" } : undefined}
           >
             {viewButtons.map((vb) => (
               <button
                 key={vb.key}
                 onClick={() => setActiveView(vb.key)}
-                className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+                className={`rounded text-xs font-medium transition-colors shrink-0 ${
+                  isMobile || isTablet
+                    ? "min-h-[44px] px-3 py-2"
+                    : "px-2.5 py-1"
+                } ${
                   activeView === vb.key
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
@@ -548,145 +825,73 @@ export default function WorkspacePage() {
           </div>
         </div>
 
-        {/* ── Sidebar collapse toggle — floats at left edge of sidebar ── */}
-        <button
-          type="button"
-          onClick={() => setSidebarCollapsed((c) => !c)}
-          className="absolute z-20 top-1/2 -translate-y-1/2 h-8 w-3.5 flex items-center justify-center bg-background border border-border rounded-sm shadow-sm hover:bg-muted transition-colors duration-200"
-          style={{
-            right: sidebarCollapsed ? 0 : sidebarWidth,
-            transition: toggleTransition,
-          }}
-          title={sidebarCollapsed ? "Show panel" : "Hide panel"}
-        >
-          <ChevronRight
-            className={`h-3 w-3 text-muted-foreground transition-transform duration-200 ${
-              sidebarCollapsed ? "" : "rotate-180"
-            }`}
-          />
-        </button>
+        {/* ── Desktop: sidebar collapse toggle + sidebar ──────────────── */}
+        {isDesktop && (
+          <>
+            {/* Sidebar collapse toggle — floats at left edge of sidebar */}
+            <button
+              type="button"
+              onClick={() => setSidebarCollapsed((c) => !c)}
+              className="absolute z-20 top-1/2 -translate-y-1/2 h-8 w-3.5 flex items-center justify-center bg-background border border-border rounded-sm shadow-sm hover:bg-muted transition-colors duration-200"
+              style={{
+                right: sidebarCollapsed ? 0 : sidebarWidth,
+                transition: toggleTransition,
+              }}
+              title={sidebarCollapsed ? "Show panel" : "Hide panel"}
+            >
+              <ChevronRight
+                className={`h-3 w-3 text-muted-foreground transition-transform duration-200 ${
+                  sidebarCollapsed ? "" : "rotate-180"
+                }`}
+              />
+            </button>
 
-        {/* ── Right sidebar ─────────────────────────────────────────── */}
-        <div
-          className="flex flex-col shrink-0 overflow-hidden"
-          style={{
-            width: sidebarCollapsed ? 0 : sidebarWidth,
-            transition: sidebarTransition,
-          }}
-        >
-          {/*
-            Inner div has a fixed width equal to sidebarWidth.
-            The outer container clips it via overflow:hidden during collapse,
-            so content doesn't reflow as the panel animates.
-          */}
-          <div className="flex h-full" style={{ width: sidebarWidth }}>
-            {/* Resize drag handle — 3px wide strip on the left edge */}
+            {/* Right sidebar */}
             <div
-              className="w-[3px] shrink-0 cursor-col-resize bg-border hover:bg-primary/40 transition-colors"
-              onMouseDown={handleResizeStart}
-              title="Drag to resize"
-            />
+              className="flex flex-col shrink-0 overflow-hidden"
+              style={{
+                width: sidebarCollapsed ? 0 : sidebarWidth,
+                transition: sidebarTransition,
+              }}
+            >
+              {/*
+                Inner div has a fixed width equal to sidebarWidth.
+                The outer container clips it via overflow:hidden during collapse,
+                so content doesn't reflow as the panel animates.
+              */}
+              <div className="flex h-full" style={{ width: sidebarWidth }}>
+                {/* Resize drag handle — 3px wide strip on the left edge */}
+                <div
+                  className="w-[3px] shrink-0 cursor-col-resize bg-border hover:bg-primary/40 transition-colors"
+                  onMouseDown={handleResizeStart}
+                  title="Drag to resize"
+                />
 
-            {/* Sidebar content panel */}
-            <div className="flex-1 flex flex-col overflow-hidden bg-background min-w-0">
-
-              {/* ── 1. Structure summary ── */}
-              <div className="shrink-0 p-3 border-b border-border">
-                <StructureSummary design={design} computed={computed} />
-              </div>
-
-              {/* ── 2. Accordion sections (scrollable) ── */}
-              <ScrollArea className="flex-1 min-h-0">
-                <div>
-                  <AccordionSection
-                    title="Geometry"
-                    summary={geometrySummary}
-                    isOpen={openSections.geometry}
-                    onToggle={() => toggleSection("geometry")}
-                  >
-                    <GeometryForm
-                      geometry={design.geometry}
-                      onChange={(geometry) => setDesign((d) => ({ ...d, geometry }))}
-                      standard={currentStandard}
-                      standardName={design.project.stateStandard}
-                      onChangeStandard={(name) =>
-                        setDesign((d) => ({
-                          ...d,
-                          project: { ...d.project, stateStandard: name },
-                        }))
-                      }
-                      onApplyStandardSize={handleApplyStandardSize}
-                    />
-                  </AccordionSection>
-
-                  <AccordionSection
-                    title="Units"
-                    summary={unitsSummary}
-                    isOpen={openSections.units}
-                    onToggle={() => toggleSection("units")}
-                  >
-                    <UnitsForm
-                      units={design.units}
-                      onChange={(units) => setDesign((d) => ({ ...d, units }))}
-                    />
-                  </AccordionSection>
-
-                  <AccordionSection
-                    title="Materials"
-                    summary={materialsSummary}
-                    isOpen={openSections.materials}
-                    onToggle={() => toggleSection("materials")}
-                  >
-                    <MaterialsForm
-                      materials={design.materials}
-                      onChange={(materials) => setDesign((d) => ({ ...d, materials }))}
-                    />
-                  </AccordionSection>
-
-                  <AccordionSection
-                    title="Rebar"
-                    summary={rebarSummary}
-                    isOpen={openSections.rebar}
-                    onToggle={() => toggleSection("rebar")}
-                  >
-                    <ReinforcementTable
-                      bars={design.reinforcement}
-                      onChange={(reinforcement) =>
-                        setDesign((d) => ({ ...d, reinforcement }))
-                      }
-                      highlightedBarId={highlightedBarId}
-                      onHighlight={setHighlightedBarId}
-                    />
-                  </AccordionSection>
-
-                  <AccordionSection
-                    title="Project"
-                    summary={projectSummary}
-                    isOpen={openSections.project}
-                    onToggle={() => toggleSection("project")}
-                  >
-                    <ProjectInfoForm
-                      project={design.project}
-                      onChange={(project) => setDesign((d) => ({ ...d, project }))}
-                    />
-                  </AccordionSection>
+                {/* Sidebar content panel */}
+                <div className="flex-1 flex flex-col overflow-hidden bg-background min-w-0">
+                  {sidebarContent}
                 </div>
-              </ScrollArea>
-
-              {/* ── 3. Computed values — always visible, pinned at bottom ── */}
-              <div className="shrink-0 border-t border-border bg-background">
-                <div className="px-3 py-2.5">
-                  <ComputedValuesPanel values={computed} />
-                </div>
-              </div>
-
-              {/* ── 4. Validation ── */}
-              <div className="shrink-0">
-                <ValidationPanel result={validation} />
               </div>
             </div>
-          </div>
-        </div>
+          </>
+        )}
+
+        {/* ── Tablet: slide-over panel (768-1023px) ─────────────────── */}
+        {isTablet && (
+          <TabletSlideOver
+            open={tabletPanelOpen}
+            onClose={() => setTabletPanelOpen(false)}
+          >
+            {sidebarContent}
+          </TabletSlideOver>
+        )}
+
+        {/* ── Mobile: bottom sheet (<768px) ─────────────────────────── */}
+        {isMobile && (
+          <MobileBottomSheet>
+            {sidebarContent}
+          </MobileBottomSheet>
+        )}
       </div>
     </div>
   );
