@@ -28,9 +28,16 @@ export function CulvertCrossSection({
   idPrefix = "cs",
 }: CulvertCrossSectionProps) {
   const { outsideWidth, outsideHeight } = computeOutsideDimensions(geo);
-  const scale = autoScale(outsideWidth, outsideHeight, width, height);
+  // Reserve extra bottom margin for material notes box below dimension chains
+  const notesH = 100;
+  const scale = autoScale(outsideWidth, outsideHeight, width, height, notesH);
   const gridId = `${idPrefix}-grid`;
   const hatchId = `${idPrefix}-hatch`;
+
+  // Position notes/scale relative to actual drawing bottom + dimension chain offset
+  const drawingBottom = toSvgY(outsideHeight, scale);
+  const belowDimensions = drawingBottom + 80; // 65px dim chains + 15px gap
+  const notesY = Math.min(belowDimensions, height - notesH - 10);
 
   return (
     <svg
@@ -62,8 +69,8 @@ export function CulvertCrossSection({
         {formatFeetInches(geo.span)} x {formatFeetInches(geo.rise)} Box Culvert
       </text>
 
-      <MaterialNotes mat={mat} x={12} y={height - 110} />
-      <ScaleIndicator ppi={scale.ppi} x={width - 180} y={height - 30} />
+      <MaterialNotes mat={mat} x={12} y={notesY} />
+      <ScaleIndicator ppi={scale.ppi} x={width - 180} y={notesY + notesH - 10} />
     </svg>
   );
 }

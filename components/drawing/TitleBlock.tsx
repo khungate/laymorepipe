@@ -15,9 +15,12 @@ interface TitleBlockProps {
   width: number;
   /** X position */
   x: number;
-  /** Y position (top of title block) */
+  /** Y position (top of entire title block including revisions) */
   y: number;
 }
+
+/** Total height exported for layout calculations */
+export const TITLE_BLOCK_TOTAL_H = 160;
 
 export function TitleBlock({
   project,
@@ -31,145 +34,153 @@ export function TitleBlock({
   y,
 }: TitleBlockProps) {
   const revs = project.revisions ?? [];
-  const revRowH = 14;
-  const revTableH = Math.max(revs.length, 3) * revRowH + 16; // min 3 blank rows
-  const mainH = 120;
-  const h = mainH + revTableH;
-  const col1 = width * 0.45;
-  const col2 = width * 0.65;
-  const col3 = width * 0.82;
+  const revRowH = 13;
+  const revRows = Math.max(revs.length, 2);
+  const revHeaderH = 14;
+  const revTableH = revRows * revRowH + revHeaderH;
+  const mainH = TITLE_BLOCK_TOTAL_H - revTableH;
 
-  const structureDesc = `${formatFeetInches(geometry.span)} x ${formatFeetInches(geometry.rise)} x ${formatFeetInches(units.totalLength)} ${geometry.cellCount > 1 ? geometry.cellCount + " Cell" : "Single Cell"} Precast Box Culvert`;
+  const structureDesc = `${formatFeetInches(geometry.span)} x ${formatFeetInches(geometry.rise)} x ${formatFeetInches(units.totalLength)} ${geometry.cellCount > 1 ? geometry.cellCount + " Cell" : "Single Cell"} Box Culvert`;
 
-  // Title block starts at y, revision table above it at y - revTableH
-  const tbY = y;
-  const revY = y - revTableH;
+  const revY = y;
+  const tbY = y + revTableH;
+
+  // Column positions as absolute x offsets from left edge of title block
+  const c1 = width * 0.35;  // Producer/Project/Structure
+  const c2 = width * 0.55;  // Personnel
+  const c3 = width * 0.72;  // PE stamp / rev
+  const c4 = width * 0.86;  // Sheet number area
 
   return (
     <g fontFamily="'Courier New', monospace">
-      {/* ─── Revision Table (above title block) ─── */}
-      <rect x={x} y={revY} width={width} height={revTableH} fill="none" stroke="black" strokeWidth={0.5} />
-      <rect x={x} y={revY} width={width} height={16} fill="#f5f5f5" stroke="black" strokeWidth={0.5} />
-      <text x={x + 6} y={revY + 11} fontSize={7} fontWeight="bold" fill="black">REV</text>
-      <text x={x + 30} y={revY + 11} fontSize={7} fontWeight="bold" fill="black">DATE</text>
-      <text x={x + 100} y={revY + 11} fontSize={7} fontWeight="bold" fill="black">DESCRIPTION</text>
-      <text x={x + width - 40} y={revY + 11} fontSize={7} fontWeight="bold" fill="black">BY</text>
+      {/* ─── Revision Table ─── */}
+      <rect x={x} y={revY} width={width} height={revTableH} fill="white" stroke="black" strokeWidth={0.5} />
+      <rect x={x} y={revY} width={width} height={revHeaderH} fill="#f5f5f5" stroke="black" strokeWidth={0.5} />
+      <text x={x + 6} y={revY + 10} fontSize={6} fontWeight="bold" fill="black">REV</text>
+      <text x={x + 28} y={revY + 10} fontSize={6} fontWeight="bold" fill="black">DATE</text>
+      <text x={x + 100} y={revY + 10} fontSize={6} fontWeight="bold" fill="black">DESCRIPTION</text>
+      <text x={x + width - 30} y={revY + 10} fontSize={6} fontWeight="bold" fill="black">BY</text>
 
-      {/* Revision rows */}
-      {Array.from({ length: Math.max(revs.length, 3) }).map((_, i) => {
-        const ry = revY + 16 + i * revRowH;
+      {/* Rev column dividers */}
+      <line x1={x + 22} y1={revY} x2={x + 22} y2={revY + revTableH} stroke="black" strokeWidth={0.2} />
+      <line x1={x + 90} y1={revY} x2={x + 90} y2={revY + revTableH} stroke="black" strokeWidth={0.2} />
+      <line x1={x + width - 40} y1={revY} x2={x + width - 40} y2={revY + revTableH} stroke="black" strokeWidth={0.2} />
+
+      {Array.from({ length: revRows }).map((_, i) => {
+        const ry = revY + revHeaderH + i * revRowH;
         const rev = revs[i];
         return (
           <g key={i}>
-            <line x1={x} y1={ry} x2={x + width} y2={ry} stroke="black" strokeWidth={0.2} />
+            {i > 0 && <line x1={x} y1={ry} x2={x + width} y2={ry} stroke="black" strokeWidth={0.15} />}
             {rev && (
               <>
-                <text x={x + 6} y={ry + 10} fontSize={7} fill="black">{rev.number}</text>
-                <text x={x + 30} y={ry + 10} fontSize={7} fill="black">{rev.date}</text>
-                <text x={x + 100} y={ry + 10} fontSize={7} fill="black">{rev.description}</text>
-                <text x={x + width - 40} y={ry + 10} fontSize={7} fill="black">{rev.by}</text>
+                <text x={x + 6} y={ry + 10} fontSize={6} fill="black">{rev.number}</text>
+                <text x={x + 28} y={ry + 10} fontSize={6} fill="black">{rev.date}</text>
+                <text x={x + 100} y={ry + 10} fontSize={6} fill="black">{rev.description}</text>
+                <text x={x + width - 30} y={ry + 10} fontSize={6} fill="black">{rev.by}</text>
               </>
             )}
           </g>
         );
       })}
 
-      {/* Column dividers for rev table */}
-      <line x1={x + 24} y1={revY} x2={x + 24} y2={revY + revTableH} stroke="black" strokeWidth={0.2} />
-      <line x1={x + 94} y1={revY} x2={x + 94} y2={revY + revTableH} stroke="black" strokeWidth={0.2} />
-      <line x1={x + width - 50} y1={revY} x2={x + width - 50} y2={revY + revTableH} stroke="black" strokeWidth={0.2} />
-
       {/* ─── Main Title Block ─── */}
-      <rect x={x} y={tbY} width={width} height={mainH} fill="none" stroke="black" strokeWidth={1.5} />
+      <rect x={x} y={tbY} width={width} height={mainH} fill="white" stroke="black" strokeWidth={1.5} />
 
-      {/* Vertical dividers */}
-      <line x1={x + col1} y1={tbY} x2={x + col1} y2={tbY + mainH} stroke="black" strokeWidth={0.5} />
-      <line x1={x + col2} y1={tbY} x2={x + col2} y2={tbY + mainH} stroke="black" strokeWidth={0.5} />
-      <line x1={x + col3} y1={tbY} x2={x + col3} y2={tbY + mainH} stroke="black" strokeWidth={0.5} />
+      {/* Column dividers */}
+      <line x1={x + c1} y1={tbY} x2={x + c1} y2={tbY + mainH} stroke="black" strokeWidth={0.5} />
+      <line x1={x + c2} y1={tbY} x2={x + c2} y2={tbY + mainH} stroke="black" strokeWidth={0.5} />
+      <line x1={x + c3} y1={tbY} x2={x + c3} y2={tbY + mainH} stroke="black" strokeWidth={0.5} />
+      <line x1={x + c4} y1={tbY} x2={x + c4} y2={tbY + mainH} stroke="black" strokeWidth={0.5} />
 
-      {/* ─── Column 1: Logo + Producer/Project/Structure ─── */}
+      {/* ─── Col 1: Producer / Project / Structure ─── */}
       {/* Logo placeholder */}
-      <rect x={x + 6} y={tbY + 4} width={50} height={22} fill="none" stroke="black" strokeWidth={0.3} strokeDasharray="4,2" rx={2} />
-      <text x={x + 31} y={tbY + 18} textAnchor="middle" fontSize={5} fill="black" opacity={0.3}>LOGO</text>
+      <rect x={x + 4} y={tbY + 3} width={36} height={16} fill="none" stroke="black" strokeWidth={0.25} strokeDasharray="3,1.5" rx={1} />
+      <text x={x + 22} y={tbY + 13} textAnchor="middle" fontSize={4} fill="black" opacity={0.25}>LOGO</text>
 
-      {/* Producer */}
-      <text x={x + 62} y={tbY + 11} fontSize={7} fill="black" opacity={0.5}>PRODUCER</text>
-      <text x={x + 62} y={tbY + 22} fontSize={10} fontWeight="bold" fill="black">
+      <text x={x + 46} y={tbY + 9} fontSize={5.5} fill="black" opacity={0.5}>PRODUCER</text>
+      <text x={x + 46} y={tbY + 18} fontSize={8} fontWeight="bold" fill="black">
         {project.clientName || "Producer Name"}
       </text>
 
-      <line x1={x} y1={tbY + 28} x2={x + col1} y2={tbY + 28} stroke="black" strokeWidth={0.3} />
+      <line x1={x} y1={tbY + 22} x2={x + c1} y2={tbY + 22} stroke="black" strokeWidth={0.25} />
 
-      {/* Project */}
-      <text x={x + 6} y={tbY + 38} fontSize={7} fill="black" opacity={0.5}>PROJECT</text>
-      <text x={x + 6} y={tbY + 49} fontSize={9} fill="black">{project.projectName || "Project Name"}</text>
+      <text x={x + 4} y={tbY + 30} fontSize={5.5} fill="black" opacity={0.5}>PROJECT</text>
+      <text x={x + 4} y={tbY + 39} fontSize={7} fill="black">{project.projectName || "Project Name"}</text>
 
-      <line x1={x} y1={tbY + 53} x2={x + col1} y2={tbY + 53} stroke="black" strokeWidth={0.3} />
+      <line x1={x} y1={tbY + 43} x2={x + c1} y2={tbY + 43} stroke="black" strokeWidth={0.25} />
 
-      {/* Structure */}
-      <text x={x + 6} y={tbY + 62} fontSize={7} fill="black" opacity={0.5}>STRUCTURE</text>
-      <text x={x + 6} y={tbY + 72} fontSize={7} fill="black">{structureDesc}</text>
+      <text x={x + 4} y={tbY + 51} fontSize={5.5} fill="black" opacity={0.5}>STRUCTURE</text>
+      <text x={x + 4} y={tbY + 60} fontSize={6} fill="black">{structureDesc}</text>
 
-      <line x1={x} y1={tbY + 76} x2={x + col1} y2={tbY + 76} stroke="black" strokeWidth={0.3} />
+      <line x1={x} y1={tbY + 64} x2={x + c1} y2={tbY + 64} stroke="black" strokeWidth={0.25} />
 
-      {/* Design standard */}
-      <text x={x + 6} y={tbY + 85} fontSize={7} fill="black" opacity={0.5}>DESIGN STANDARD</text>
-      <text x={x + 6} y={tbY + 95} fontSize={7} fill="black">AASHTO LRFD per {project.stateStandard}</text>
+      <text x={x + 4} y={tbY + 72} fontSize={5.5} fill="black" opacity={0.5}>DESIGN STANDARD</text>
+      <text x={x + 4} y={tbY + 81} fontSize={6} fill="black">AASHTO LRFD per {project.stateStandard}</text>
 
-      <line x1={x} y1={tbY + 99} x2={x + col1} y2={tbY + 99} stroke="black" strokeWidth={0.3} />
+      <line x1={x} y1={tbY + 85} x2={x + c1} y2={tbY + 85} stroke="black" strokeWidth={0.25} />
 
-      {/* Location */}
-      <text x={x + 6} y={tbY + 108} fontSize={7} fill="black" opacity={0.5}>LOCATION</text>
-      <text x={x + 6} y={tbY + 117} fontSize={7} fill="black">{project.location || ""}</text>
+      <text x={x + 4} y={tbY + 93} fontSize={5.5} fill="black" opacity={0.5}>LOCATION</text>
+      <text x={x + 4} y={tbY + 102} fontSize={6} fill="black">{project.location || ""}</text>
 
-      {/* ─── Column 2: Personnel + Dates ─── */}
-      <text x={x + col1 + 6} y={tbY + 11} fontSize={7} fill="black" opacity={0.5}>DRAWN BY</text>
-      <text x={x + col1 + 6} y={tbY + 22} fontSize={9} fill="black">{project.drawnBy}</text>
+      {/* ─── Col 2: Personnel ─── */}
+      <text x={x + c1 + 4} y={tbY + 9} fontSize={5.5} fill="black" opacity={0.5}>DRAWN BY</text>
+      <text x={x + c1 + 4} y={tbY + 18} fontSize={7} fill="black">{project.drawnBy}</text>
 
-      <line x1={x + col1} y1={tbY + 28} x2={x + col2} y2={tbY + 28} stroke="black" strokeWidth={0.3} />
+      <line x1={x + c1} y1={tbY + 22} x2={x + c2} y2={tbY + 22} stroke="black" strokeWidth={0.25} />
 
-      <text x={x + col1 + 6} y={tbY + 38} fontSize={7} fill="black" opacity={0.5}>CHECKED BY</text>
-      <text x={x + col1 + 6} y={tbY + 49} fontSize={9} fill="black">{project.checkedBy}</text>
+      <text x={x + c1 + 4} y={tbY + 30} fontSize={5.5} fill="black" opacity={0.5}>CHECKED BY</text>
+      <text x={x + c1 + 4} y={tbY + 39} fontSize={7} fill="black">{project.checkedBy}</text>
 
-      <line x1={x + col1} y1={tbY + 53} x2={x + col2} y2={tbY + 53} stroke="black" strokeWidth={0.3} />
+      <line x1={x + c1} y1={tbY + 43} x2={x + c2} y2={tbY + 43} stroke="black" strokeWidth={0.25} />
 
-      <text x={x + col1 + 6} y={tbY + 62} fontSize={7} fill="black" opacity={0.5}>ENGINEER</text>
-      <text x={x + col1 + 6} y={tbY + 72} fontSize={9} fill="black">{project.engineer}</text>
+      <text x={x + c1 + 4} y={tbY + 51} fontSize={5.5} fill="black" opacity={0.5}>ENGINEER</text>
+      <text x={x + c1 + 4} y={tbY + 60} fontSize={7} fill="black">{project.engineer}</text>
 
-      <line x1={x + col1} y1={tbY + 76} x2={x + col2} y2={tbY + 76} stroke="black" strokeWidth={0.3} />
+      <line x1={x + c1} y1={tbY + 64} x2={x + c2} y2={tbY + 64} stroke="black" strokeWidth={0.25} />
 
-      <text x={x + col1 + 6} y={tbY + 85} fontSize={7} fill="black" opacity={0.5}>DATE</text>
-      <text x={x + col1 + 6} y={tbY + 95} fontSize={9} fill="black">{project.dateCreated}</text>
+      <text x={x + c1 + 4} y={tbY + 72} fontSize={5.5} fill="black" opacity={0.5}>DATE</text>
+      <text x={x + c1 + 4} y={tbY + 81} fontSize={7} fill="black">{project.dateCreated}</text>
 
-      <line x1={x + col1} y1={tbY + 99} x2={x + col2} y2={tbY + 99} stroke="black" strokeWidth={0.3} />
+      <line x1={x + c1} y1={tbY + 85} x2={x + c2} y2={tbY + 85} stroke="black" strokeWidth={0.25} />
 
-      <text x={x + col1 + 6} y={tbY + 108} fontSize={7} fill="black" opacity={0.5}>PROJECT NO.</text>
-      <text x={x + col1 + 6} y={tbY + 117} fontSize={9} fill="black">{project.projectNumber}</text>
+      <text x={x + c1 + 4} y={tbY + 93} fontSize={5.5} fill="black" opacity={0.5}>PROJECT NO.</text>
+      <text x={x + c1 + 4} y={tbY + 102} fontSize={7} fill="black">{project.projectNumber}</text>
 
-      {/* ─── Column 3: PE Stamp placeholder ─── */}
-      <rect x={x + col2 + 8} y={tbY + 6} width={col3 - col2 - 16} height={col3 - col2 - 16} fill="none" stroke="black" strokeWidth={0.3} strokeDasharray="4,2" rx={2} />
-      <text x={x + (col2 + col3) / 2} y={tbY + (col3 - col2) / 2 + 2} textAnchor="middle" fontSize={6} fill="black" opacity={0.3}>
-        PE STAMP
-      </text>
-      <text x={x + col2 + 6} y={tbY + 108} fontSize={7} fill="black" opacity={0.5}>REV.</text>
-      <text x={x + col2 + 30} y={tbY + 108} fontSize={11} fontWeight="bold" fill="black">{project.revisionNumber}</text>
+      {/* ─── Col 3: PE Stamp + REV ─── */}
+      {(() => {
+        const stampSize = Math.min(c3 - c2 - 12, mainH - 30);
+        return (
+          <rect
+            x={x + c2 + (c3 - c2 - stampSize) / 2}
+            y={tbY + 4}
+            width={stampSize}
+            height={stampSize}
+            fill="none" stroke="black" strokeWidth={0.25} strokeDasharray="3,1.5" rx={2}
+          />
+        );
+      })()}
+      <text x={x + (c2 + c3) / 2} y={tbY + 38} textAnchor="middle" fontSize={5} fill="black" opacity={0.25}>PE STAMP</text>
 
-      {/* ─── Column 4: Sheet title + number ─── */}
-      <text x={x + col3 + 6} y={tbY + 11} fontSize={7} fill="black" opacity={0.5}>SHEET TITLE</text>
-      <text x={x + col3 + 6} y={tbY + 26} fontSize={9} fontWeight="bold" fill="black">
-        {sheetTitle}
-      </text>
-      <text x={x + col3 + 6} y={tbY + 40} fontSize={7} fill="black" opacity={0.5}>
+      <line x1={x + c2} y1={tbY + mainH - 20} x2={x + c3} y2={tbY + mainH - 20} stroke="black" strokeWidth={0.25} />
+      <text x={x + c2 + 4} y={tbY + mainH - 10} fontSize={5.5} fill="black" opacity={0.5}>REV.</text>
+      <text x={x + c2 + 24} y={tbY + mainH - 6} fontSize={12} fontWeight="bold" fill="black">{project.revisionNumber}</text>
+
+      {/* ─── Col 4: Sheet Title ─── */}
+      <text x={x + c3 + 4} y={tbY + 9} fontSize={5.5} fill="black" opacity={0.5}>SHEET TITLE</text>
+      <text x={x + c3 + 4} y={tbY + 22} fontSize={8} fontWeight="bold" fill="black">{sheetTitle}</text>
+
+      <line x1={x + c3} y1={tbY + 28} x2={x + c4} y2={tbY + 28} stroke="black" strokeWidth={0.25} />
+
+      <text x={x + c3 + 4} y={tbY + 38} fontSize={6} fill="black" opacity={0.5}>
         {project.stateStandard} Shop Drawing
       </text>
 
-      <line x1={x + col3} y1={tbY + 50} x2={x + width} y2={tbY + 50} stroke="black" strokeWidth={0.3} />
-
-      {/* Sheet number */}
-      <text x={x + col3 + (width - col3) / 2} y={tbY + 90} textAnchor="middle" fontSize={28} fontWeight="bold" fill="black">
+      {/* ─── Col 5: Sheet Number ─── */}
+      <text x={x + (c4 + width) / 2} y={tbY + mainH * 0.55} textAnchor="middle" fontSize={24} fontWeight="bold" fill="black">
         {sheetNumber}
       </text>
-      <text x={x + col3 + (width - col3) / 2} y={tbY + 108} textAnchor="middle" fontSize={9} fill="black" opacity={0.5}>
+      <text x={x + (c4 + width) / 2} y={tbY + mainH * 0.55 + 16} textAnchor="middle" fontSize={8} fill="black" opacity={0.5}>
         OF {totalSheets}
       </text>
     </g>
