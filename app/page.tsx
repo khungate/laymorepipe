@@ -642,7 +642,10 @@ export default function WorkspacePage() {
               variant="ghost"
               size="icon"
               className="h-8 w-8"
-              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              onClick={() => {
+                if (!mounted) return;
+                setTheme(theme === "dark" ? "light" : "dark");
+              }}
               title={mounted ? (theme === "dark" ? "Switch to light mode" : "Switch to dark mode") : undefined}
             >
               {mounted ? (
