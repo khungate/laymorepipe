@@ -22,14 +22,33 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
   // Track drag distance to distinguish click from drag
   const dragDistRef = useRef(0);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    setViewState((prev) => ({
-      ...prev,
-      zoom: Math.max(0.2, Math.min(5, prev.zoom * delta)),
-    }));
-  }, []);
+  const zoomToPoint = useCallback(
+    (clientX: number, clientY: number, zoomFactor: number) => {
+      const container = containerRef.current;
+      if (!container) return;
+      const rect = container.getBoundingClientRect();
+      const mouseX = clientX - rect.left;
+      const mouseY = clientY - rect.top;
+
+      setViewState((prev) => {
+        const newZoom = Math.max(0.2, Math.min(5, prev.zoom * zoomFactor));
+        // Keep the point under the cursor fixed
+        const newX = mouseX - ((mouseX - prev.x) / prev.zoom) * newZoom;
+        const newY = mouseY - ((mouseY - prev.y) / prev.zoom) * newZoom;
+        return { x: newX, y: newY, zoom: newZoom };
+      });
+    },
+    []
+  );
+
+  const handleWheel = useCallback(
+    (e: React.WheelEvent) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? 0.9 : 1.1;
+      zoomToPoint(e.clientX, e.clientY, delta);
+    },
+    [zoomToPoint]
+  );
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -55,9 +74,16 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
     [dragging, dragStart]
   );
 
-  const handleMouseUp = useCallback(() => {
-    setDragging(false);
-  }, []);
+  const handleMouseUp = useCallback(
+    (e: React.MouseEvent) => {
+      setDragging(false);
+      // Click (not drag) → zoom in on that spot
+      if (dragDistRef.current < 5) {
+        zoomToPoint(e.clientX, e.clientY, 1.4);
+      }
+    },
+    [zoomToPoint]
+  );
 
   const resetView = useCallback(() => {
     setViewState({ x: 0, y: 0, zoom: 1 });
@@ -92,7 +118,7 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
         <div
           style={{
             transform: `translate(${viewState.x}px, ${viewState.y}px) scale(${viewState.zoom})`,
-            transformOrigin: "center center",
+            transformOrigin: "0 0",
             transition: dragging ? "none" : "transform 0.1s ease-out",
           }}
           className="w-full h-full"
@@ -112,9 +138,12 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
         }}
       >
         <button
-          onClick={() =>
-            setViewState((prev) => ({ ...prev, zoom: Math.max(0.2, prev.zoom * 0.8) }))
-          }
+          onClick={() => {
+            const container = containerRef.current;
+            if (!container) return;
+            const rect = container.getBoundingClientRect();
+            zoomToPoint(rect.left + rect.width / 2, rect.top + rect.height / 2, 0.8);
+          }}
           className="px-2.5 py-1.5 text-xs font-mono hover:bg-foreground/5 transition-colors"
           style={{ color: "hsl(var(--muted-foreground))" }}
         >
@@ -128,9 +157,12 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
           {Math.round(viewState.zoom * 100)}%
         </button>
         <button
-          onClick={() =>
-            setViewState((prev) => ({ ...prev, zoom: Math.min(5, prev.zoom * 1.25) }))
-          }
+          onClick={() => {
+            const container = containerRef.current;
+            if (!container) return;
+            const rect = container.getBoundingClientRect();
+            zoomToPoint(rect.left + rect.width / 2, rect.top + rect.height / 2, 1.25);
+          }}
           className="px-2.5 py-1.5 text-xs font-mono hover:bg-foreground/5 transition-colors"
           style={{ color: "hsl(var(--muted-foreground))" }}
         >
