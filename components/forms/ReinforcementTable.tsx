@@ -6,12 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { barWeightPerFoot } from "@/lib/calculations/quantities";
 import { Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 
 interface ReinforcementTableProps {
   bars: ReinforcementBar[];
   onChange: (bars: ReinforcementBar[]) => void;
+  /** ID of currently highlighted bar (from drawing click) */
+  highlightedBarId?: string | null;
+  onHighlight?: (barId: string | null) => void;
 }
 
 const ZONES: { value: BarZone; label: string }[] = [
@@ -32,8 +34,21 @@ const STEEL_TYPES: { value: SteelType; label: string }[] = [
 
 const BAR_SIZES = [3, 4, 5, 6, 7, 8, 9, 10, 11];
 
-export function ReinforcementTable({ bars, onChange }: ReinforcementTableProps) {
+export function ReinforcementTable({
+  bars,
+  onChange,
+  highlightedBarId,
+  onHighlight,
+}: ReinforcementTableProps) {
   const [expandedId, setExpandedId] = React.useState<string | null>(null);
+  const highlightedRowRef = React.useRef<HTMLTableRowElement | null>(null);
+
+  // Scroll to highlighted row when it changes
+  React.useEffect(() => {
+    if (highlightedBarId && highlightedRowRef.current) {
+      highlightedRowRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [highlightedBarId]);
 
   const updateBar = (id: string, patch: Partial<ReinforcementBar>) => {
     onChange(bars.map((b) => (b.id === id ? { ...b, ...patch } : b)));
@@ -59,6 +74,7 @@ export function ReinforcementTable({ bars, onChange }: ReinforcementTableProps) 
 
   const removeBar = (id: string) => {
     onChange(bars.filter((b) => b.id !== id));
+    if (highlightedBarId === id) onHighlight?.(null);
   };
 
   return (
@@ -83,14 +99,26 @@ export function ReinforcementTable({ bars, onChange }: ReinforcementTableProps) 
             {bars.map((bar) => {
               const hasBend = bar.shape !== "straight";
               const isExpanded = expandedId === bar.id;
+              const isHighlighted = bar.id === highlightedBarId;
 
               return (
                 <React.Fragment key={bar.id}>
-                  <TableRow className="h-9">
+                  <TableRow
+                    ref={isHighlighted ? (el) => { highlightedRowRef.current = el; } : undefined}
+                    className={`h-9 cursor-pointer transition-colors ${
+                      isHighlighted
+                        ? "bg-amber-500/15 hover:bg-amber-500/20"
+                        : "hover:bg-muted/40"
+                    }`}
+                    onClick={() => onHighlight?.(isHighlighted ? null : bar.id)}
+                  >
                     <TableCell className="p-0.5 w-5">
                       {hasBend && (
                         <button
-                          onClick={() => setExpandedId(isExpanded ? null : bar.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedId(isExpanded ? null : bar.id);
+                          }}
                           className="p-0.5 text-muted-foreground hover:text-foreground"
                         >
                           {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
@@ -98,9 +126,14 @@ export function ReinforcementTable({ bars, onChange }: ReinforcementTableProps) 
                       )}
                     </TableCell>
                     <TableCell className="p-0.5">
-                      <Input value={bar.barMark} onChange={(e) => updateBar(bar.id, { barMark: e.target.value })} className="h-7 text-xs font-mono px-1" />
+                      <Input
+                        value={bar.barMark}
+                        onChange={(e) => updateBar(bar.id, { barMark: e.target.value })}
+                        onClick={(e) => e.stopPropagation()}
+                        className={`h-7 text-xs font-mono px-1 ${isHighlighted ? "font-bold text-amber-500" : ""}`}
+                      />
                     </TableCell>
-                    <TableCell className="p-0.5">
+                    <TableCell className="p-0.5" onClick={(e) => e.stopPropagation()}>
                       <Select value={String(bar.barSize)} onValueChange={(v) => updateBar(bar.id, { barSize: Number(v) })}>
                         <SelectTrigger className="h-7 text-xs px-1"><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -109,15 +142,15 @@ export function ReinforcementTable({ bars, onChange }: ReinforcementTableProps) 
                       </Select>
                     </TableCell>
                     <TableCell className="p-0.5">
-                      <Input type="number" value={bar.quantity} onChange={(e) => updateBar(bar.id, { quantity: Number(e.target.value) })} className="h-7 text-xs font-mono px-1" min={1} />
+                      <Input type="number" value={bar.quantity} onChange={(e) => updateBar(bar.id, { quantity: Number(e.target.value) })} onClick={(e) => e.stopPropagation()} className="h-7 text-xs font-mono px-1" min={1} />
                     </TableCell>
                     <TableCell className="p-0.5">
-                      <Input type="number" value={bar.spacing} onChange={(e) => updateBar(bar.id, { spacing: Number(e.target.value) })} className="h-7 text-xs font-mono px-1" min={0} />
+                      <Input type="number" value={bar.spacing} onChange={(e) => updateBar(bar.id, { spacing: Number(e.target.value) })} onClick={(e) => e.stopPropagation()} className="h-7 text-xs font-mono px-1" min={0} />
                     </TableCell>
                     <TableCell className="p-0.5">
-                      <Input type="number" value={bar.length} onChange={(e) => updateBar(bar.id, { length: Number(e.target.value) })} className="h-7 text-xs font-mono px-1" min={0} />
+                      <Input type="number" value={bar.length} onChange={(e) => updateBar(bar.id, { length: Number(e.target.value) })} onClick={(e) => e.stopPropagation()} className="h-7 text-xs font-mono px-1" min={0} />
                     </TableCell>
-                    <TableCell className="p-0.5">
+                    <TableCell className="p-0.5" onClick={(e) => e.stopPropagation()}>
                       <Select value={bar.shape} onValueChange={(v) => updateBar(bar.id, { shape: v as BarShape })}>
                         <SelectTrigger className="h-7 text-xs px-1"><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -128,7 +161,7 @@ export function ReinforcementTable({ bars, onChange }: ReinforcementTableProps) 
                         </SelectContent>
                       </Select>
                     </TableCell>
-                    <TableCell className="p-0.5">
+                    <TableCell className="p-0.5" onClick={(e) => e.stopPropagation()}>
                       <Select value={bar.zone} onValueChange={(v) => updateBar(bar.id, { zone: v as BarZone })}>
                         <SelectTrigger className="h-7 text-xs px-1"><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -136,7 +169,7 @@ export function ReinforcementTable({ bars, onChange }: ReinforcementTableProps) 
                         </SelectContent>
                       </Select>
                     </TableCell>
-                    <TableCell className="p-0.5">
+                    <TableCell className="p-0.5" onClick={(e) => e.stopPropagation()}>
                       <Select value={bar.steelType} onValueChange={(v) => updateBar(bar.id, { steelType: v as SteelType })}>
                         <SelectTrigger className="h-7 text-xs px-1"><SelectValue /></SelectTrigger>
                         <SelectContent>
@@ -145,12 +178,16 @@ export function ReinforcementTable({ bars, onChange }: ReinforcementTableProps) 
                       </Select>
                     </TableCell>
                     <TableCell className="p-0.5">
-                      <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeBar(bar.id)}>
+                      <Button
+                        variant="ghost" size="icon" className="h-7 w-7"
+                        onClick={(e) => { e.stopPropagation(); removeBar(bar.id); }}
+                      >
                         <Trash2 className="h-3 w-3" />
                       </Button>
                     </TableCell>
                   </TableRow>
-                  {/* Expanded row for bent bar leg dimensions */}
+
+                  {/* Expanded bend leg dimensions */}
                   {hasBend && isExpanded && (
                     <TableRow className="h-8 bg-muted/30">
                       <TableCell colSpan={10} className="p-1 pl-7">
@@ -182,12 +219,14 @@ export function ReinforcementTable({ bars, onChange }: ReinforcementTableProps) 
                       </TableCell>
                     </TableRow>
                   )}
-                  {/* Inline location for all bars */}
+
+                  {/* Inline location */}
                   <TableRow className="h-6 border-b">
                     <TableCell colSpan={10} className="p-0 pl-7 pb-1">
                       <Input
                         value={bar.location}
                         onChange={(e) => updateBar(bar.id, { location: e.target.value })}
+                        onClick={(e) => e.stopPropagation()}
                         className="h-5 text-xs px-1 border-0 bg-transparent shadow-none focus-visible:ring-0"
                         placeholder="Location (e.g. Top slab interior)"
                       />

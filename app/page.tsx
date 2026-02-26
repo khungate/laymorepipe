@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useMemo, useEffect, useRef, useState } from "react";
+import React, { useMemo, useEffect, useRef, useState, useCallback } from "react";
 import { CulvertDesign } from "@/lib/types/culvert";
+import { StandardSize } from "@/lib/standards/types";
 import { DEFAULT_DESIGN } from "@/lib/drawing/defaults";
 import { computeAll } from "@/lib/calculations/geometry";
 import { saveDesign, loadDesign, clearDesign, exportDesignJSON, importDesignJSON } from "@/lib/persistence/storage";
 import { useUndoRedo } from "@/lib/hooks/useUndoRedo";
 import { validateDesign } from "@/lib/validation/validate";
-import { VDOT } from "@/lib/standards/vdot";
+import { ALL_STANDARDS } from "@/lib/standards";
 import { CulvertCrossSection } from "@/components/drawing/CulvertCrossSection";
 import { PlanView } from "@/components/drawing/PlanView";
 import { DrawingViewport } from "@/components/drawing/DrawingViewport";
@@ -27,10 +28,79 @@ import { FileDown, Ruler, Check, Undo2, Redo2, Upload, Download, FilePlus } from
 
 type DrawingView = "cross-section" | "plan-standard" | "plan-inlet" | "plan-outlet";
 
+/* ─── Structure Summary Card ────────────────────────────────────────── */
+
+function StructureSummary({
+  design,
+  computed,
+}: {
+  design: CulvertDesign;
+  computed: ReturnType<typeof computeAll>;
+}) {
+  const geo = design.geometry;
+  const units = design.units;
+  const proj = design.project;
+
+  const cellLabel =
+    geo.cellCount === 1 ? "Single Cell" : geo.cellCount === 2 ? "Double Cell" : "Triple Cell";
+
+  const statusColor: Record<string, string> = {
+    draft: "text-amber-500",
+    submitted: "text-blue-400",
+    approved: "text-emerald-400",
+  };
+
+  return (
+    <div
+      className="rounded-sm px-3 py-2.5 border border-border/60"
+      style={{
+        background: "linear-gradient(135deg, hsl(var(--card)) 0%, hsl(var(--muted)/40) 100%)",
+      }}
+    >
+      {/* Size line */}
+      <div className="font-mono font-bold text-sm tracking-tight leading-none mb-1" style={{ letterSpacing: "-0.01em" }}>
+        {formatFeetInches(geo.span)} × {formatFeetInches(geo.rise)} × {formatFeetInches(units.totalLength)}
+      </div>
+
+      {/* Type line */}
+      <div className="text-xs text-muted-foreground font-medium mb-2">
+        {cellLabel} Box Culvert
+      </div>
+
+      {/* Tags row */}
+      <div className="flex items-center gap-1.5 flex-wrap">
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm text-[10px] font-mono font-semibold bg-muted text-foreground">
+          {computed.totalUnitCount} units
+        </span>
+        <span className="text-muted-foreground text-[10px]">·</span>
+        <span className="inline-flex items-center px-1.5 py-0.5 rounded-sm text-[10px] font-mono font-semibold bg-primary/10 text-primary">
+          {proj.stateStandard}
+        </span>
+        <span className="text-muted-foreground text-[10px]">·</span>
+        <span className={`text-[10px] font-semibold capitalize ${statusColor[proj.status] ?? "text-muted-foreground"}`}>
+          {proj.status}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main Workspace ────────────────────────────────────────────────── */
+
 export default function WorkspacePage() {
-  const { state: design, set: setDesign, replace: replaceDesign, undo, redo, canUndo, canRedo } = useUndoRedo<CulvertDesign>(DEFAULT_DESIGN);
+  const {
+    state: design,
+    set: setDesign,
+    replace: replaceDesign,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+  } = useUndoRedo<CulvertDesign>(DEFAULT_DESIGN);
+
   const [activeView, setActiveView] = useState<DrawingView>("cross-section");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved">("idle");
+  const [highlightedBarId, setHighlightedBarId] = useState<string | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialLoad = useRef(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -42,7 +112,7 @@ export default function WorkspacePage() {
     isInitialLoad.current = false;
   }, [replaceDesign]);
 
-  // Debounce-save on every state change (500ms)
+  // Debounce-save on every state change
   useEffect(() => {
     if (isInitialLoad.current) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -56,18 +126,13 @@ export default function WorkspacePage() {
     };
   }, [design]);
 
-  // Keyboard shortcuts for undo/redo
+  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey;
-      if (mod && e.key === "z" && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-      }
-      if (mod && e.key === "z" && e.shiftKey) {
-        e.preventDefault();
-        redo();
-      }
+      if (mod && e.key === "z" && !e.shiftKey) { e.preventDefault(); undo(); }
+      if (mod && e.key === "z" && e.shiftKey) { e.preventDefault(); redo(); }
+      if (e.key === "Escape") setHighlightedBarId(null);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -78,12 +143,45 @@ export default function WorkspacePage() {
     [design.geometry, design.units, design.reinforcement]
   );
 
-  const validation = useMemo(
-    () => validateDesign(design, VDOT),
-    [design]
+  // Resolve current standard from project setting
+  const currentStandard = useMemo(
+    () => ALL_STANDARDS[design.project.stateStandard] ?? ALL_STANDARDS["VDOT"],
+    [design.project.stateStandard]
   );
 
-  const structureLabel = `${formatFeetInches(design.geometry.span)} x ${formatFeetInches(design.geometry.rise)} x ${formatFeetInches(design.units.totalLength)}`;
+  const validation = useMemo(
+    () => validateDesign(design, currentStandard),
+    [design, currentStandard]
+  );
+
+  // Apply standard size: sets geometry dimensions + material covers + haunch default
+  const handleApplyStandardSize = useCallback(
+    (size: StandardSize) => {
+      setDesign((d) => ({
+        ...d,
+        geometry: {
+          ...d.geometry,
+          span: size.span,
+          rise: size.rise,
+          wallThickness: size.wallThickness,
+          topSlabThickness: size.topSlabThickness,
+          bottomSlabThickness: size.bottomSlabThickness,
+          haunchWidth: 8,
+          haunchHeight: 8,
+        },
+        materials: {
+          ...d.materials,
+          coverTopSlabExterior: currentStandard.covers.topSlabExterior,
+          coverTopSlabInterior: currentStandard.covers.topSlabInterior,
+          coverBottomSlabExterior: currentStandard.covers.bottomSlabExterior,
+          coverBottomSlabInterior: currentStandard.covers.bottomSlabInterior,
+          coverWallExterior: currentStandard.covers.wallExterior,
+          coverWallInterior: currentStandard.covers.wallInterior,
+        },
+      }));
+    },
+    [setDesign, currentStandard]
+  );
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -94,7 +192,6 @@ export default function WorkspacePage() {
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to import");
     }
-    // Reset input so the same file can be re-imported
     e.target.value = "";
   };
 
@@ -107,14 +204,7 @@ export default function WorkspacePage() {
 
   return (
     <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
-      {/* Hidden file input for import */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".json"
-        onChange={handleImport}
-        className="hidden"
-      />
+      <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} className="hidden" />
 
       {/* Top bar */}
       <header className="h-12 border-b border-border flex items-center justify-between px-4 shrink-0">
@@ -124,22 +214,19 @@ export default function WorkspacePage() {
             <span className="font-semibold text-sm tracking-tight">Permatile</span>
           </div>
           <Separator orientation="vertical" className="h-5" />
-          <span className="text-sm text-muted-foreground font-mono">
-            {structureLabel} {design.geometry.cellCount > 1 ? `${design.geometry.cellCount} Cell` : "Single Cell"} Box Culvert
+          <span className="text-xs text-muted-foreground font-mono">
+            {formatFeetInches(design.geometry.span)} × {formatFeetInches(design.geometry.rise)} × {formatFeetInches(design.units.totalLength)}{" "}
+            {design.geometry.cellCount > 1 ? `${design.geometry.cellCount} Cell` : "Single Cell"} Box Culvert
           </span>
         </div>
         <div className="flex items-center gap-1">
-          {/* Undo / Redo */}
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={undo} disabled={!canUndo} title="Undo (Ctrl+Z)">
             <Undo2 className="h-3.5 w-3.5" />
           </Button>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={redo} disabled={!canRedo} title="Redo (Ctrl+Shift+Z)">
             <Redo2 className="h-3.5 w-3.5" />
           </Button>
-
           <Separator orientation="vertical" className="h-5 mx-1" />
-
-          {/* File operations */}
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
             if (confirm("Start a new design? Current design will be cleared.")) {
               clearDesign();
@@ -154,9 +241,7 @@ export default function WorkspacePage() {
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => exportDesignJSON(design)} title="Export JSON">
             <Download className="h-3.5 w-3.5" />
           </Button>
-
           <Separator orientation="vertical" className="h-5 mx-1" />
-
           {saveStatus === "saved" && (
             <span className="flex items-center gap-1 text-xs text-muted-foreground animate-in fade-in mr-1">
               <Check className="h-3 w-3" />
@@ -181,8 +266,11 @@ export default function WorkspacePage() {
       <div className="flex flex-1 min-h-0">
         {/* Drawing viewport (center) */}
         <div className="flex-1 min-w-0 flex flex-col">
-          {/* View switcher bar */}
-          <div className="flex items-center gap-1 px-3 py-1.5 border-b border-border bg-muted/20 shrink-0">
+          {/* View switcher */}
+          <div
+            className="flex items-center gap-1 px-3 py-1.5 border-b border-border shrink-0"
+            style={{ background: "rgba(0,0,0,0.25)", borderColor: "rgba(100,140,200,0.15)" }}
+          >
             {viewButtons.map((vb) => (
               <button
                 key={vb.key}
@@ -207,35 +295,36 @@ export default function WorkspacePage() {
                   reinforcement={design.reinforcement}
                   width={900}
                   height={700}
+                  highlightedBarId={highlightedBarId}
+                  onBarClick={(id) =>
+                    setHighlightedBarId((prev) => (prev === id ? null : id))
+                  }
                 />
               )}
               {activeView === "plan-standard" && (
-                <PlanView
-                  geometry={design.geometry}
-                  units={design.units}
-                  unitType="standard"
-                />
+                <PlanView geometry={design.geometry} units={design.units} unitType="standard" />
               )}
               {activeView === "plan-inlet" && (
-                <PlanView
-                  geometry={design.geometry}
-                  units={design.units}
-                  unitType="inlet"
-                />
+                <PlanView geometry={design.geometry} units={design.units} unitType="inlet" />
               )}
               {activeView === "plan-outlet" && (
-                <PlanView
-                  geometry={design.geometry}
-                  units={design.units}
-                  unitType="outlet"
-                />
+                <PlanView geometry={design.geometry} units={design.units} unitType="outlet" />
               )}
             </DrawingViewport>
           </div>
         </div>
 
-        {/* Right panel: Parameter forms */}
+        {/* Right sidebar */}
         <div className="w-[380px] border-l border-border flex flex-col shrink-0">
+          {/* ── TOP: Structure summary + computed values ── */}
+          <div className="shrink-0 border-b border-border">
+            <div className="p-3 space-y-3">
+              <StructureSummary design={design} computed={computed} />
+              <ComputedValuesPanel values={computed} />
+            </div>
+          </div>
+
+          {/* ── MIDDLE: Tab forms ── */}
           <Tabs defaultValue="geometry" className="flex flex-col flex-1 min-h-0">
             <TabsList className="mx-3 mt-2 shrink-0">
               <TabsTrigger value="geometry" className="text-xs">Geometry</TabsTrigger>
@@ -251,6 +340,8 @@ export default function WorkspacePage() {
                   <GeometryForm
                     geometry={design.geometry}
                     onChange={(geometry) => setDesign((d) => ({ ...d, geometry }))}
+                    standard={currentStandard}
+                    onApplyStandardSize={handleApplyStandardSize}
                   />
                 </TabsContent>
 
@@ -271,9 +362,9 @@ export default function WorkspacePage() {
                 <TabsContent value="rebar" className="mt-0">
                   <ReinforcementTable
                     bars={design.reinforcement}
-                    onChange={(reinforcement) =>
-                      setDesign((d) => ({ ...d, reinforcement }))
-                    }
+                    onChange={(reinforcement) => setDesign((d) => ({ ...d, reinforcement }))}
+                    highlightedBarId={highlightedBarId}
+                    onHighlight={setHighlightedBarId}
                   />
                 </TabsContent>
 
@@ -287,13 +378,8 @@ export default function WorkspacePage() {
             </ScrollArea>
           </Tabs>
 
-          {/* Validation panel */}
+          {/* ── BOTTOM: Validation ── */}
           <ValidationPanel result={validation} />
-
-          {/* Computed values at bottom of right panel */}
-          <div className="border-t border-border p-3 shrink-0">
-            <ComputedValuesPanel values={computed} />
-          </div>
         </div>
       </div>
     </div>

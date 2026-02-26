@@ -1,0 +1,80 @@
+import { StateStandard } from "./types";
+
+/**
+ * North Carolina Department of Transportation
+ * Based on NCDOT Structures Management Unit standards
+ * Reference: AASHTO LRFD with NCDOT modifications
+ */
+export const NCDOT: StateStandard = {
+  name: "NCDOT",
+  designCode: "AASHTO LRFD 9th Ed 2020 w/ NCDOT Modifications",
+  covers: {
+    topSlabExterior: 2.0,
+    topSlabInterior: 1.5,
+    bottomSlabExterior: 2.0,
+    bottomSlabInterior: 1.5,
+    wallExterior: 2.0,
+    wallInterior: 1.5,
+  },
+  minConcreteStrength: 4000,
+  rebarGrade: 60,
+  fillCategories: [
+    { min: 0, max: 24, label: "0 to 2 ft", corrosionProtection: true },
+    { min: 24, max: 48, label: "2 to 4 ft" },
+    { min: 48, max: 96, label: "4 to 8 ft" },
+    { min: 96, max: 180, label: "8 to 15 ft" },
+    { min: 180, max: 300, label: "15 to 25 ft" },
+    { min: 300, max: 480, label: "25 to 40 ft" },
+  ],
+  bufferZone: { min: 3, max: 6 },
+  maxLiftHoles: 4,
+  barDimensionConvention: "out_to_out",
+  gasketSpec: "ASTM C1677",
+  qcStampRequired: true,
+  generalNotes: [
+    "All reinforcing steel shall be Grade 60, ASTM A615 or ASTM A706.",
+    "Concrete compressive strength f'c = 4,000 PSI minimum at 28 days.",
+    "All bar dimensions are out to out.",
+    "All joints shall be sealed with flexible sealant or gaskets conforming to ASTM C1677.",
+    "Lifting devices shall be designed for a minimum of 2x unit weight.",
+    "All precast units shall conform to NCDOT Standards and ASTM C1577.",
+    "Concrete cover: All exterior faces 2\", All interior faces 1 1/2\".",
+    "Haunches shall be formed at all interior corners as shown on drawings.",
+    "Units shall be manufactured under NCDOT approved QC program.",
+  ],
+  standardSizes: [
+    // span x rise in inches, with recommended wall/slab thicknesses
+    // Based on ASTM C1577 + NCDOT standard drawings
+    { span: 36, rise: 24, wallThickness: 5, topSlabThickness: 6, bottomSlabThickness: 6, label: "3'×2'" },
+    { span: 36, rise: 36, wallThickness: 5, topSlabThickness: 6, bottomSlabThickness: 6, label: "3'×3'" },
+    { span: 48, rise: 24, wallThickness: 6, topSlabThickness: 7, bottomSlabThickness: 7, label: "4'×2'" },
+    { span: 48, rise: 36, wallThickness: 6, topSlabThickness: 7, bottomSlabThickness: 7, label: "4'×3'" },
+    { span: 48, rise: 48, wallThickness: 6, topSlabThickness: 7, bottomSlabThickness: 7, label: "4'×4'" },
+    { span: 60, rise: 36, wallThickness: 7, topSlabThickness: 8, bottomSlabThickness: 8, label: "5'×3'" },
+    { span: 60, rise: 48, wallThickness: 7, topSlabThickness: 8, bottomSlabThickness: 8, label: "5'×4'" },
+    { span: 60, rise: 60, wallThickness: 7, topSlabThickness: 8, bottomSlabThickness: 8, label: "5'×5'" },
+    { span: 72, rise: 36, wallThickness: 8, topSlabThickness: 8, bottomSlabThickness: 8, label: "6'×3'" },
+    { span: 72, rise: 48, wallThickness: 8, topSlabThickness: 8, bottomSlabThickness: 8, label: "6'×4'" },
+    { span: 72, rise: 60, wallThickness: 8, topSlabThickness: 8, bottomSlabThickness: 8, label: "6'×5'" },
+    { span: 72, rise: 72, wallThickness: 8, topSlabThickness: 9, bottomSlabThickness: 9, label: "6'×6'" },
+    { span: 84, rise: 48, wallThickness: 8, topSlabThickness: 9, bottomSlabThickness: 9, label: "7'×4'" },
+    { span: 84, rise: 60, wallThickness: 8, topSlabThickness: 9, bottomSlabThickness: 9, label: "7'×5'" },
+    { span: 84, rise: 72, wallThickness: 8, topSlabThickness: 9, bottomSlabThickness: 9, label: "7'×6'" },
+    { span: 84, rise: 84, wallThickness: 9, topSlabThickness: 10, bottomSlabThickness: 10, label: "7'×7'" },
+    { span: 96, rise: 48, wallThickness: 9, topSlabThickness: 10, bottomSlabThickness: 9, label: "8'×4'" },
+    { span: 96, rise: 60, wallThickness: 9, topSlabThickness: 10, bottomSlabThickness: 9, label: "8'×5'" },
+    { span: 96, rise: 72, wallThickness: 9, topSlabThickness: 10, bottomSlabThickness: 10, label: "8'×6'" },
+    { span: 96, rise: 84, wallThickness: 9, topSlabThickness: 10, bottomSlabThickness: 10, label: "8'×7'" },
+    { span: 96, rise: 96, wallThickness: 10, topSlabThickness: 11, bottomSlabThickness: 10, label: "8'×8'" },
+    { span: 120, rise: 48, wallThickness: 10, topSlabThickness: 11, bottomSlabThickness: 10, label: "10'×4'" },
+    { span: 120, rise: 60, wallThickness: 10, topSlabThickness: 11, bottomSlabThickness: 10, label: "10'×5'" },
+    { span: 120, rise: 72, wallThickness: 10, topSlabThickness: 11, bottomSlabThickness: 10, label: "10'×6'" },
+    { span: 120, rise: 96, wallThickness: 10, topSlabThickness: 12, bottomSlabThickness: 11, label: "10'×8'" },
+    { span: 120, rise: 120, wallThickness: 11, topSlabThickness: 12, bottomSlabThickness: 12, label: "10'×10'" },
+    { span: 144, rise: 48, wallThickness: 11, topSlabThickness: 12, bottomSlabThickness: 11, label: "12'×4'" },
+    { span: 144, rise: 72, wallThickness: 11, topSlabThickness: 12, bottomSlabThickness: 11, label: "12'×6'" },
+    { span: 144, rise: 96, wallThickness: 11, topSlabThickness: 13, bottomSlabThickness: 12, label: "12'×8'" },
+    { span: 144, rise: 120, wallThickness: 12, topSlabThickness: 14, bottomSlabThickness: 12, label: "12'×10'" },
+    { span: 144, rise: 144, wallThickness: 12, topSlabThickness: 14, bottomSlabThickness: 13, label: "12'×12'" },
+  ],
+};

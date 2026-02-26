@@ -124,3 +124,42 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ─── Engineering Drawing Canvas CSS Custom Properties ───────────────── */
+/* Default = print-friendly (black on white) */
+:root {
+  --draw-bg: transparent;
+  --draw-grid: rgba(0, 0, 0, 0.05);
+  --draw-stroke-heavy: #000000;     /* object lines: concrete profile */
+  --draw-stroke-medium: #222222;    /* secondary visible lines */
+  --draw-stroke-thin: #444444;      /* dimension / extension lines */
+  --draw-stroke-center: #000000;    /* center lines */
+  --draw-fill-void: #ffffff;        /* inside of culvert opening */
+  --draw-fill-surface: rgba(255,255,255,0.0);
+  --draw-hatch: rgba(0, 0, 0, 0.45);   /* concrete section hatch */
+  --draw-text: #000000;
+  --draw-text-dim: #333333;
+  --draw-rebar: #000000;
+  --draw-rebar-highlight: #f59e0b;
+  --draw-dim: rgba(0, 0, 0, 0.65);
+  --draw-center: rgba(0, 0, 0, 0.4);
+}
+
+/* Dark engineering canvas (workspace viewport) */
+.engineering-canvas {
+  --draw-bg: transparent;           /* viewport div bg is the dark color */
+  --draw-grid: rgba(65, 105, 170, 0.13);
+  --draw-stroke-heavy: #dde6f0;     /* object lines: bright for contrast */
+  --draw-stroke-medium: #8fa6bf;    /* medium visible lines */
+  --draw-stroke-thin: #4a6178;      /* dimension / extension lines */
+  --draw-stroke-center: #3b6fa0;    /* center lines: blue */
+  --draw-fill-void: #0d1219;        /* culvert opening: near-black */
+  --draw-fill-surface: rgba(13, 18, 25, 0.6);
+  --draw-hatch: rgba(160, 180, 210, 0.28);  /* hatch: subtle on dark */
+  --draw-text: #c5d5e8;
+  --draw-text-dim: #7a96af;
+  --draw-rebar: #22d3ee;            /* cyan rebar dots */
+  --draw-rebar-highlight: #f59e0b;  /* amber for selected */
+  --draw-dim: rgba(90, 140, 200, 0.7);
+  --draw-center: rgba(60, 120, 200, 0.45);
+}

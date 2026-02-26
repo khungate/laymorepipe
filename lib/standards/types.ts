@@ -5,6 +5,15 @@ export interface FillCategory {
   corrosionProtection?: boolean;
 }
 
+export interface StandardSize {
+  span: number;        // inches
+  rise: number;        // inches
+  wallThickness: number;
+  topSlabThickness: number;
+  bottomSlabThickness: number;
+  label: string;       // e.g. "6'×4'"
+}
+
 export interface StateStandard {
   name: string;
   designCode: string;
@@ -25,4 +34,5 @@ export interface StateStandard {
   gasketSpec: string;
   qcStampRequired: boolean;
   generalNotes: string[];
+  standardSizes?: StandardSize[];
 }

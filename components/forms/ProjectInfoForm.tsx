@@ -5,6 +5,7 @@ import { ProjectInfo } from "@/lib/types/culvert";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TextField } from "./TextField";
+import { STANDARD_NAMES } from "@/lib/standards";
 
 interface ProjectInfoFormProps {
   project: ProjectInfo;
@@ -39,17 +40,20 @@ export function ProjectInfoForm({ project, onChange }: ProjectInfoFormProps) {
             value={project.stateStandard}
             onValueChange={(v) => update({ stateStandard: v })}
           >
-            <SelectTrigger className="h-8 text-sm">
+            <SelectTrigger className="h-8 text-sm font-mono font-medium">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="VDOT">VDOT</SelectItem>
-              <SelectItem value="NCDOT">NCDOT</SelectItem>
-              <SelectItem value="TDOT">TDOT</SelectItem>
+              {STANDARD_NAMES.map((name) => (
+                <SelectItem key={name} value={name}>
+                  {name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
       </div>
+
       <TextField
         label="Location"
         value={project.location}
@@ -76,6 +80,23 @@ export function ProjectInfoForm({ project, onChange }: ProjectInfoFormProps) {
           value={project.approvedBy}
           onChange={(v) => update({ approvedBy: v })}
         />
+      </div>
+
+      <div className="space-y-1">
+        <Label className="text-xs text-muted-foreground">Status</Label>
+        <Select
+          value={project.status}
+          onValueChange={(v) => update({ status: v as ProjectInfo["status"] })}
+        >
+          <SelectTrigger className="h-8 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="draft">Draft</SelectItem>
+            <SelectItem value="submitted">Submitted</SelectItem>
+            <SelectItem value="approved">Approved</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     </div>
   );

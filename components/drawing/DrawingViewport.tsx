@@ -7,7 +7,8 @@ interface DrawingViewportProps {
 }
 
 /**
- * Zoomable, pannable viewport for the engineering drawing.
+ * Zoomable, pannable engineering drawing viewport.
+ * Dark navy background — engineering canvas aesthetic.
  * Scroll to zoom, drag to pan.
  */
 export function DrawingViewport({ children }: DrawingViewportProps) {
@@ -15,6 +16,8 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
   const [viewState, setViewState] = useState({ x: 0, y: 0, zoom: 1 });
   const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  // Track drag distance to distinguish click from drag
+  const dragDistRef = useRef(0);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault();
@@ -29,6 +32,7 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
     (e: React.MouseEvent) => {
       if (e.button === 0) {
         setDragging(true);
+        dragDistRef.current = 0;
         setDragStart({ x: e.clientX - viewState.x, y: e.clientY - viewState.y });
       }
     },
@@ -38,6 +42,7 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
       if (!dragging) return;
+      dragDistRef.current += Math.abs(e.movementX) + Math.abs(e.movementY);
       setViewState((prev) => ({
         ...prev,
         x: e.clientX - dragStart.x,
@@ -56,11 +61,23 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
   }, []);
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-muted/30">
-      {/* Subtle engineering paper background */}
+    <div
+      className="engineering-canvas relative w-full h-full overflow-hidden"
+      style={{ background: "#1a1f2e" }}
+    >
+      {/* Subtle vignette overlay */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: "radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.35) 100%)",
+          zIndex: 0,
+        }}
+      />
+
       <div
         ref={containerRef}
-        className="w-full h-full cursor-grab active:cursor-grabbing"
+        className="w-full h-full cursor-grab active:cursor-grabbing relative"
+        style={{ zIndex: 1 }}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -78,27 +95,50 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
           {children}
         </div>
       </div>
-      {/* Zoom controls */}
-      <div className="absolute bottom-3 right-3 flex items-center gap-1 bg-background/90 border border-border rounded-md px-2 py-1 text-xs font-mono text-muted-foreground">
+
+      {/* Zoom controls — styled for dark canvas */}
+      <div
+        className="absolute bottom-3 right-3 flex items-center gap-0.5 rounded"
+        style={{
+          background: "rgba(10, 14, 22, 0.75)",
+          border: "1px solid rgba(100, 140, 200, 0.2)",
+          backdropFilter: "blur(4px)",
+          zIndex: 10,
+        }}
+      >
         <button
           onClick={() =>
             setViewState((prev) => ({ ...prev, zoom: Math.max(0.2, prev.zoom * 0.8) }))
           }
-          className="px-1.5 py-0.5 hover:text-foreground"
+          className="px-2.5 py-1.5 text-xs font-mono hover:bg-white/5 transition-colors"
+          style={{ color: "#7a96af" }}
         >
           −
         </button>
-        <button onClick={resetView} className="px-1.5 py-0.5 hover:text-foreground">
+        <button
+          onClick={resetView}
+          className="px-2.5 py-1.5 text-xs font-mono hover:bg-white/5 transition-colors"
+          style={{ color: "#7a96af", minWidth: 42, textAlign: "center" }}
+        >
           {Math.round(viewState.zoom * 100)}%
         </button>
         <button
           onClick={() =>
             setViewState((prev) => ({ ...prev, zoom: Math.min(5, prev.zoom * 1.25) }))
           }
-          className="px-1.5 py-0.5 hover:text-foreground"
+          className="px-2.5 py-1.5 text-xs font-mono hover:bg-white/5 transition-colors"
+          style={{ color: "#7a96af" }}
         >
           +
         </button>
+      </div>
+
+      {/* View label */}
+      <div
+        className="absolute bottom-3 left-3 text-xs font-mono"
+        style={{ color: "rgba(80, 110, 155, 0.7)", zIndex: 10, letterSpacing: "0.05em" }}
+      >
+        PERMATILE / ENGINEERING CANVAS
       </div>
     </div>
   );

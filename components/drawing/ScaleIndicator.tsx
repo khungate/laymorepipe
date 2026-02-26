@@ -3,14 +3,11 @@
 import React from "react";
 
 interface ScaleIndicatorProps {
-  /** Drawing pixels per real-world inch */
   ppi: number;
-  /** Position in SVG coordinates */
   x: number;
   y: number;
 }
 
-/** Pick a round interval (in inches) that renders a bar between 60-200 SVG pixels */
 function pickInterval(ppi: number): { inches: number; label: string } {
   const candidates = [
     { inches: 6, label: '6"' },
@@ -22,15 +19,11 @@ function pickInterval(ppi: number): { inches: number; label: string } {
   ];
   for (const c of candidates) {
     const len = c.inches * ppi;
-    if (len >= 60 && len <= 200) return c;
+    if (len >= 55 && len <= 220) return c;
   }
-  // Fallback: 12 inches
   return candidates[1];
 }
 
-/**
- * Graphical scale bar showing a known measurement.
- */
 export function ScaleIndicator({ ppi, x, y }: ScaleIndicatorProps) {
   const interval = pickInterval(ppi);
   const barLen = interval.inches * ppi;
@@ -39,35 +32,30 @@ export function ScaleIndicator({ ppi, x, y }: ScaleIndicatorProps) {
 
   return (
     <g>
-      {/* Label */}
       <text
-        x={x}
-        y={y - 8}
+        x={x} y={y - 9}
         fontSize={7}
         fontWeight="bold"
-        fill="currentColor"
-        letterSpacing={0.5}
-        fontFamily="'Courier New', monospace"
+        letterSpacing={0.8}
+        style={{ fill: "var(--draw-text-dim)" }}
+        fontFamily="'Courier New', Courier, monospace"
       >
         SCALE
       </text>
-
-      {/* Main bar (alternating black/white segments) */}
-      <rect x={x} y={y} width={barLen / 2} height={barH} fill="currentColor" />
-      <rect x={x + barLen / 2} y={y} width={barLen / 2} height={barH} fill="none" stroke="currentColor" strokeWidth={0.5} />
-
+      {/* Alternating bar segments */}
+      <rect x={x} y={y} width={barLen / 2} height={barH} style={{ fill: "var(--draw-stroke-heavy)" }} />
+      <rect
+        x={x + barLen / 2} y={y} width={barLen / 2} height={barH}
+        style={{ fill: "var(--draw-fill-void)", stroke: "var(--draw-stroke-heavy)" }}
+        strokeWidth={0.5}
+      />
       {/* Tick marks */}
-      <line x1={x} y1={y - tickH / 2} x2={x} y2={y + barH + tickH / 2} stroke="currentColor" strokeWidth={0.5} />
-      <line x1={x + barLen / 2} y1={y} x2={x + barLen / 2} y2={y + barH + tickH / 2} stroke="currentColor" strokeWidth={0.35} />
-      <line x1={x + barLen} y1={y - tickH / 2} x2={x + barLen} y2={y + barH + tickH / 2} stroke="currentColor" strokeWidth={0.5} />
-
+      <line x1={x} y1={y - tickH / 2} x2={x} y2={y + barH + tickH / 2} style={{ stroke: "var(--draw-stroke-heavy)" }} strokeWidth={0.6} />
+      <line x1={x + barLen / 2} y1={y} x2={x + barLen / 2} y2={y + barH + tickH / 2} style={{ stroke: "var(--draw-stroke-medium)" }} strokeWidth={0.4} />
+      <line x1={x + barLen} y1={y - tickH / 2} x2={x + barLen} y2={y + barH + tickH / 2} style={{ stroke: "var(--draw-stroke-heavy)" }} strokeWidth={0.6} />
       {/* Labels */}
-      <text x={x} y={y + barH + tickH + 8} fontSize={7} fill="currentColor" textAnchor="middle" fontFamily="'Courier New', monospace">
-        0
-      </text>
-      <text x={x + barLen} y={y + barH + tickH + 8} fontSize={7} fill="currentColor" textAnchor="middle" fontFamily="'Courier New', monospace">
-        {interval.label}
-      </text>
+      <text x={x} y={y + barH + tickH + 9} fontSize={7} textAnchor="middle" style={{ fill: "var(--draw-text-dim)" }} fontFamily="'Courier New', Courier, monospace">0</text>
+      <text x={x + barLen} y={y + barH + tickH + 9} fontSize={7} textAnchor="middle" style={{ fill: "var(--draw-text-dim)" }} fontFamily="'Courier New', Courier, monospace">{interval.label}</text>
     </g>
   );
 }
