@@ -14,6 +14,10 @@ interface TabletSlideOverProps {
  * Right-side slide-over panel for the tablet breakpoint (768-1023px).
  * Slides in from the right over a semi-transparent backdrop.
  * Dismiss via close button or backdrop click.
+ *
+ * NOTE: Content scrolling is managed by sidebarContent internally
+ * (accordion section owns overflow-y-auto). This container just provides
+ * the fixed-height frame.
  */
 export function TabletSlideOver({ open, onClose, children }: TabletSlideOverProps) {
   // Close on Escape key
@@ -64,8 +68,8 @@ export function TabletSlideOver({ open, onClose, children }: TabletSlideOverProp
           </Button>
         </div>
 
-        {/* Content — fills full height */}
-        <div className="flex-1 min-h-0 overflow-hidden">
+        {/* Content — sidebarContent manages its own internal scroll */}
+        <div className="flex-1 min-h-0">
           {children}
         </div>
       </div>

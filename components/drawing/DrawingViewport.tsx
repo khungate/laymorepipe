@@ -5,14 +5,35 @@ import { useTheme } from "next-themes";
 
 interface DrawingViewportProps {
   children: React.ReactNode;
+  /** Logical width of the SVG content (default 900) */
+  contentWidth?: number;
+  /** Logical height of the SVG content (default 700) */
+  contentHeight?: number;
+  /**
+   * Bottom inset (px) for the zoom controls.
+   * Pass a larger value on mobile to keep them above the bottom sheet peek.
+   * Default: 12
+   */
+  bottomOffset?: number;
 }
 
 /**
  * Zoomable, pannable engineering drawing viewport.
+ *
+ * On mount (and whenever the container resizes) the view is automatically
+ * fitted so the entire drawing is centred and visible — especially important
+ * on small mobile screens where the 900×700 SVG would otherwise be
+ * off-screen.
+ *
  * Desktop: scroll to zoom, drag to pan.
  * Mobile: pinch to zoom, single-finger drag to pan, double-tap to zoom in/out.
  */
-export function DrawingViewport({ children }: DrawingViewportProps) {
+export function DrawingViewport({
+  children,
+  contentWidth = 900,
+  contentHeight = 700,
+  bottomOffset = 12,
+}: DrawingViewportProps) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -22,6 +43,48 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
   const [dragging, setDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const dragDistRef = useRef(0);
+
+  // Stores the computed fit-to-container view so resetView always snaps back
+  // to the correct fit regardless of container size changes.
+  const fitViewRef = useRef({ x: 0, y: 0, zoom: 1 });
+
+  // Whether we've set the initial fit view yet (only do it once)
+  const hasInitializedRef = useRef(false);
+
+  // ─── Compute fit-to-container view ───────────────────────────────────
+  const computeFitView = useCallback(
+    (containerW: number, containerH: number) => {
+      if (containerW === 0 || containerH === 0) return { x: 0, y: 0, zoom: 1 };
+      const fitZoom =
+        Math.min(containerW / contentWidth, containerH / contentHeight) * 0.85;
+      const fitX = (containerW - contentWidth * fitZoom) / 2;
+      const fitY = (containerH - contentHeight * fitZoom) / 2;
+      return { x: fitX, y: fitY, zoom: fitZoom };
+    },
+    [contentWidth, contentHeight]
+  );
+
+  // ─── Track container size; auto-fit on mount ──────────────────────────
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const { width, height } = entry.contentRect;
+        const fit = computeFitView(width, height);
+        fitViewRef.current = fit;
+        // Only auto-set viewState on the very first measurement (mount)
+        if (!hasInitializedRef.current && width > 0 && height > 0) {
+          hasInitializedRef.current = true;
+          setViewState(fit);
+        }
+      }
+    });
+
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [computeFitView]);
 
   // Touch state refs (refs to avoid stale closures in touch handlers)
   const touchStateRef = useRef({
@@ -127,14 +190,14 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
         const tapDy = Math.abs(e.touches[0].clientY - ts.lastTapY);
 
         if (dt < 300 && tapDx < 30 && tapDy < 30) {
-          // Double tap — toggle between zoomed in and reset
+          // Double tap — toggle between zoomed in and fit view
           e.preventDefault();
           setViewState((prev) => {
             if (prev.zoom > 1.5) {
               // Zoom out to fit
-              return { x: 0, y: 0, zoom: 1 };
+              return fitViewRef.current;
             } else {
-              // Zoom in 2.5x centered on tap point
+              // Zoom in 2.5x centred on tap point
               const container = containerRef.current;
               if (!container) return prev;
               const rect = container.getBoundingClientRect();
@@ -232,8 +295,9 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
     };
   }, [dragStart]);
 
+  // Reset snaps back to the computed fit-to-container view
   const resetView = useCallback(() => {
-    setViewState({ x: 0, y: 0, zoom: 1 });
+    setViewState(fitViewRef.current);
   }, []);
 
   return (
@@ -274,14 +338,16 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
         </div>
       </div>
 
-      {/* Zoom controls — touch-friendly sizing */}
+      {/* Zoom controls — positioned above the bottom sheet on mobile via bottomOffset */}
       <div
-        className="absolute bottom-3 right-3 flex items-center gap-0.5 rounded"
+        className="absolute right-3 flex items-center gap-0.5 rounded"
         style={{
+          bottom: bottomOffset,
           background: "hsl(var(--background) / 0.75)",
           border: "1px solid hsl(var(--border))",
           backdropFilter: "blur(4px)",
           zIndex: 10,
+          transition: "bottom 200ms ease",
         }}
         onMouseDown={(e) => e.stopPropagation()}
         onTouchStart={(e) => e.stopPropagation()}

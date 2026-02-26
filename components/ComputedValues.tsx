@@ -6,6 +6,12 @@ import { formatFeetInches } from "@/lib/calculations/quantities";
 
 interface ComputedValuesPanelProps {
   values: ComputedValues;
+  /**
+   * When true, renders a single compact summary row for tight spaces
+   * (e.g. mobile peek bar).
+   * Format: "0.807 CY · 186 lbs · 3,453 lbs/unit"
+   */
+  compact?: boolean;
 }
 
 interface StatRowProps {
@@ -34,7 +40,25 @@ function StatRow({ label, value, unit, accent }: StatRowProps) {
   );
 }
 
-export function ComputedValuesPanel({ values }: ComputedValuesPanelProps) {
+export function ComputedValuesPanel({ values, compact = false }: ComputedValuesPanelProps) {
+  if (compact) {
+    return (
+      <div className="flex items-center gap-1.5 font-mono text-xs tabular-nums py-0.5">
+        <span className="font-semibold" style={{ color: "hsl(var(--primary))" }}>
+          {values.concreteVolumePerUnit.toFixed(3)} CY
+        </span>
+        <span className="text-muted-foreground">·</span>
+        <span className="text-foreground/80">
+          {Math.round(values.steelWeightPerUnit).toLocaleString()} lbs
+        </span>
+        <span className="text-muted-foreground">·</span>
+        <span className="text-foreground/80">
+          {Math.round(values.unitWeight).toLocaleString()} lbs/unit
+        </span>
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* Section header */}

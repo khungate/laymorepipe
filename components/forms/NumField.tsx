@@ -33,6 +33,7 @@ export function NumField({
       <div className="flex items-center gap-1">
         <Input
           type="number"
+          inputMode="decimal"
           value={value}
           onChange={(e) => onChange(Number(e.target.value))}
           step={step}

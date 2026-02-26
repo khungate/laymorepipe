@@ -22,7 +22,6 @@ import { ComputedValuesPanel } from "@/components/ComputedValues";
 import { ValidationPanel } from "@/components/ValidationPanel";
 import { MobileBottomSheet } from "@/components/workspace/MobileBottomSheet";
 import { TabletSlideOver } from "@/components/workspace/TabletSlideOver";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -198,10 +197,16 @@ export default function WorkspacePage() {
 
   const isMobileQuery = useMediaQuery("(max-width: 767px)");
   const isTabletQuery = useMediaQuery("(min-width: 768px) and (max-width: 1023px)");
+  // Landscape mobile: short dimension, bottom sheet eats the screen at full peek height
+  const isLandscapeQuery = useMediaQuery(
+    "(orientation: landscape) and (max-height: 500px)"
+  );
 
   const isMobile = mounted && isMobileQuery;
   const isTablet = mounted && isTabletQuery;
   const isDesktop = !isMobile && !isTablet;
+  // True when mobile AND in landscape orientation (e.g. phone rotated)
+  const isLandscape = isMobile && isLandscapeQuery;
 
   // Tablet slide-over open state
   const [tabletPanelOpen, setTabletPanelOpen] = useState(false);
@@ -385,12 +390,20 @@ export default function WorkspacePage() {
   const rebarSummary = `${rebarCount} bar${rebarCount !== 1 ? "s" : ""}`;
   const projectSummary = design.project.projectName || "Untitled";
 
-  const viewButtons: { key: DrawingView; label: string }[] = [
-    { key: "cross-section", label: "Cross Section" },
-    { key: "plan-standard", label: "Standard Unit" },
-    { key: "plan-inlet", label: "Inlet Unit" },
-    { key: "plan-outlet", label: "Outlet Unit" },
+  const viewButtons: { key: DrawingView; label: string; shortLabel: string }[] = [
+    { key: "cross-section", label: "Cross Section", shortLabel: "Section" },
+    { key: "plan-standard", label: "Standard Unit", shortLabel: "Standard" },
+    { key: "plan-inlet", label: "Inlet Unit", shortLabel: "Inlet" },
+    { key: "plan-outlet", label: "Outlet Unit", shortLabel: "Outlet" },
   ];
+
+  // ── Mobile-specific layout values ─────────────────────────────────
+  // Keep peek height in sync with MobileBottomSheet constants.
+  const MOBILE_PEEK_HEIGHT = isLandscape ? 60 : 142;
+  // Position zoom controls above the bottom sheet peek on mobile
+  const zoomBottomOffset = isMobile ? MOBILE_PEEK_HEIGHT + 12 : 12;
+  // Compact one-liner for the drag handle area in landscape peek
+  const compactSummary = `${formatFeetInches(geo.span)}×${formatFeetInches(geo.rise)} · ${totalUnits} units · ${computed.concreteVolumePerUnit.toFixed(3)} CY`;
 
   // Smooth transition — disabled while resizing to avoid jank
   const sidebarTransition = isDragging ? "none" : "width 250ms ease";
@@ -402,14 +415,19 @@ export default function WorkspacePage() {
   // the desktop sidebar div, TabletSlideOver, or MobileBottomSheet.
   // It is only mounted once — no DOM duplication.
   const sidebarContent = (
-    <div className="flex flex-col h-full overflow-y-auto">
+    // IMPORTANT: this div must NOT have overflow-y-auto.
+    // The accordion section div below owns the single scroll container.
+    // The parent (bottom sheet, tablet slide-over, or desktop sidebar) simply
+    // gives this element its height — no overflow on those hosts either.
+    // This eliminates the triple-nested scroll bug on iOS Safari.
+    <div className="flex flex-col h-full">
       {/* 1. Structure summary */}
       <div className="shrink-0 p-3 border-b border-border">
         <StructureSummary design={design} computed={computed} />
       </div>
 
-      {/* 2. Accordion sections (scrollable) */}
-      <ScrollArea className="flex-1 min-h-0">
+      {/* 2. Accordion sections — SINGLE scroll container for this tree */}
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
         <div>
           <AccordionSection
             title="Geometry"
@@ -484,7 +502,7 @@ export default function WorkspacePage() {
             />
           </AccordionSection>
         </div>
-      </ScrollArea>
+      </div>
 
       {/* 3. Computed values — pinned at bottom */}
       <div className="shrink-0 border-t border-border bg-background">
@@ -797,13 +815,17 @@ export default function WorkspacePage() {
                     : "text-muted-foreground hover:text-foreground hover:bg-muted"
                 }`}
               >
-                {vb.label}
+                {isMobile ? vb.shortLabel : vb.label}
               </button>
             ))}
           </div>
 
           <div className="flex-1 min-h-0">
-            <DrawingViewport>
+            <DrawingViewport
+              contentWidth={900}
+              contentHeight={700}
+              bottomOffset={zoomBottomOffset}
+            >
               {activeView === "cross-section" && (
                 <CulvertCrossSection
                   geometry={design.geometry}
@@ -907,7 +929,7 @@ export default function WorkspacePage() {
 
         {/* ── Mobile: bottom sheet (<768px) ─────────────────────────── */}
         {isMobile && (
-          <MobileBottomSheet>
+          <MobileBottomSheet compactSummary={compactSummary}>
             {sidebarContent}
           </MobileBottomSheet>
         )}

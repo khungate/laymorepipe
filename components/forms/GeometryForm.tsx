@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { NumField } from "./NumField";
 import { Ruler } from "lucide-react";
+import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 
 interface GeometryFormProps {
   geometry: CulvertGeometry;
@@ -155,6 +156,7 @@ function QuickSizeSelector({
   onSelect,
 }: QuickSizeSelectorProps) {
   const [open, setOpen] = useState(false);
+  const isMobile = useMediaQuery("(max-width: 767px)");
 
   // Find if current size matches a standard
   const matchedLabel = sizes.find(
@@ -188,10 +190,14 @@ function QuickSizeSelector({
         <span className="text-muted-foreground text-xs ml-2">{open ? "▲" : "▼"}</span>
       </button>
 
-      {/* Size grid */}
+      {/* Size grid — 3 columns on mobile (44px targets), 4 columns on desktop */}
       {open && (
         <div className="border-t border-border p-2">
-          <div className="grid grid-cols-4 gap-1 max-h-[200px] overflow-y-auto">
+          <div
+            className={`grid gap-1 max-h-[200px] overflow-y-auto ${
+              isMobile ? "grid-cols-3" : "grid-cols-4"
+            }`}
+          >
             {sizes.map((size) => {
               const isActive = size.span === currentSpan && size.rise === currentRise;
               return (
@@ -202,8 +208,9 @@ function QuickSizeSelector({
                     setOpen(false);
                   }}
                   className={`
-                    px-1.5 py-2 rounded text-center text-[11px] font-mono font-medium
+                    rounded text-center font-mono font-medium
                     border transition-colors leading-tight
+                    ${isMobile ? "px-1 py-3 text-xs min-h-[44px]" : "px-1.5 py-2 text-[11px]"}
                     ${isActive
                       ? "bg-primary text-primary-foreground border-primary"
                       : "bg-background border-border text-foreground hover:bg-primary/10 hover:border-primary/40"
