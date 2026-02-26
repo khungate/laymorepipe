@@ -24,7 +24,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { formatFeetInches } from "@/lib/calculations/quantities";
-import { FileDown, Ruler, Check, Undo2, Redo2, Upload, Download, FilePlus } from "lucide-react";
+import { FileDown, Ruler, Check, Undo2, Redo2, Upload, Download, FilePlus, Sun, Moon } from "lucide-react";
+import { useTheme } from "next-themes";
 
 type DrawingView = "cross-section" | "plan-standard" | "plan-inlet" | "plan-outlet";
 
@@ -101,6 +102,7 @@ export default function WorkspacePage() {
   const [activeView, setActiveView] = useState<DrawingView>("cross-section");
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved">("idle");
   const [highlightedBarId, setHighlightedBarId] = useState<string | null>(null);
+  const { theme, setTheme } = useTheme();
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialLoad = useRef(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -240,6 +242,16 @@ export default function WorkspacePage() {
           </Button>
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => exportDesignJSON(design)} title="Export JSON">
             <Download className="h-3.5 w-3.5" />
+          </Button>
+          <Separator orientation="vertical" className="h-5 mx-1" />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
           </Button>
           <Separator orientation="vertical" className="h-5 mx-1" />
           {saveStatus === "saved" && (

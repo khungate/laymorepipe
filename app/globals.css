@@ -127,22 +127,23 @@
 
 /* ─── Engineering Drawing Canvas CSS Custom Properties ───────────────── */
 /* Default = print-friendly (black on white) */
+/* Light mode drawing vars — classic black-on-white engineering drawing */
 :root {
   --draw-bg: transparent;
-  --draw-grid: rgba(0, 0, 0, 0.05);
-  --draw-stroke-heavy: #000000;     /* object lines: concrete profile */
-  --draw-stroke-medium: #222222;    /* secondary visible lines */
-  --draw-stroke-thin: #444444;      /* dimension / extension lines */
-  --draw-stroke-center: #000000;    /* center lines */
-  --draw-fill-void: #ffffff;        /* inside of culvert opening */
-  --draw-fill-surface: rgba(255,255,255,0.0);
-  --draw-hatch: rgba(0, 0, 0, 0.45);   /* concrete section hatch */
-  --draw-text: #000000;
-  --draw-text-dim: #333333;
-  --draw-rebar: #000000;
-  --draw-rebar-highlight: #f59e0b;
-  --draw-dim: rgba(0, 0, 0, 0.65);
-  --draw-center: rgba(0, 0, 0, 0.4);
+  --draw-grid: oklch(0.7 0 0 / 0.12);
+  --draw-stroke-heavy: oklch(0.15 0 0);      /* object lines */
+  --draw-stroke-medium: oklch(0.25 0 0);     /* secondary lines */
+  --draw-stroke-thin: oklch(0.4 0 0);        /* dimension lines */
+  --draw-stroke-center: oklch(0.35 0 0);     /* center lines */
+  --draw-fill-void: oklch(1 0 0);            /* opening: white */
+  --draw-fill-surface: oklch(1 0 0 / 0);
+  --draw-hatch: oklch(0.3 0 0 / 0.35);       /* concrete hatch */
+  --draw-text: oklch(0.15 0 0);
+  --draw-text-dim: oklch(0.35 0 0);
+  --draw-rebar: oklch(0.577 0.245 27.325);   /* theme primary */
+  --draw-rebar-highlight: oklch(0.808 0.114 19.571);
+  --draw-dim: oklch(0.35 0 0 / 0.7);
+  --draw-center: oklch(0.4 0 0 / 0.4);
 }
 
 /* Dark engineering canvas (workspace viewport) */

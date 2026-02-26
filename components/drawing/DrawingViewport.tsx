@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState, useCallback } from "react";
+import { useTheme } from "next-themes";
 
 interface DrawingViewportProps {
   children: React.ReactNode;
@@ -12,6 +13,8 @@ interface DrawingViewportProps {
  * Scroll to zoom, drag to pan.
  */
 export function DrawingViewport({ children }: DrawingViewportProps) {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
   const containerRef = useRef<HTMLDivElement>(null);
   const [viewState, setViewState] = useState({ x: 0, y: 0, zoom: 1 });
   const [dragging, setDragging] = useState(false);
@@ -62,17 +65,19 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
 
   return (
     <div
-      className="engineering-canvas relative w-full h-full overflow-hidden"
-      style={{ background: "var(--canvas-bg, #1a1f2e)" }}
+      className={`${isDark ? "engineering-canvas" : ""} relative w-full h-full overflow-hidden`}
+      style={{ background: isDark ? "var(--canvas-bg, #1a1f2e)" : "hsl(var(--muted) / 0.3)" }}
     >
-      {/* Subtle vignette overlay */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background: "radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.35) 100%)",
-          zIndex: 0,
-        }}
-      />
+      {/* Subtle vignette overlay (dark mode only) */}
+      {isDark && (
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: "radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.35) 100%)",
+            zIndex: 0,
+          }}
+        />
+      )}
 
       <div
         ref={containerRef}
@@ -110,14 +115,14 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
           onClick={() =>
             setViewState((prev) => ({ ...prev, zoom: Math.max(0.2, prev.zoom * 0.8) }))
           }
-          className="px-2.5 py-1.5 text-xs font-mono hover:bg-white/5 transition-colors"
+          className="px-2.5 py-1.5 text-xs font-mono hover:bg-foreground/5 transition-colors"
           style={{ color: "hsl(var(--muted-foreground))" }}
         >
           −
         </button>
         <button
           onClick={resetView}
-          className="px-2.5 py-1.5 text-xs font-mono hover:bg-white/5 transition-colors"
+          className="px-2.5 py-1.5 text-xs font-mono hover:bg-foreground/5 transition-colors"
           style={{ color: "hsl(var(--muted-foreground))", minWidth: 42, textAlign: "center" }}
         >
           {Math.round(viewState.zoom * 100)}%
@@ -126,7 +131,7 @@ export function DrawingViewport({ children }: DrawingViewportProps) {
           onClick={() =>
             setViewState((prev) => ({ ...prev, zoom: Math.min(5, prev.zoom * 1.25) }))
           }
-          className="px-2.5 py-1.5 text-xs font-mono hover:bg-white/5 transition-colors"
+          className="px-2.5 py-1.5 text-xs font-mono hover:bg-foreground/5 transition-colors"
           style={{ color: "hsl(var(--muted-foreground))" }}
         >
           +
